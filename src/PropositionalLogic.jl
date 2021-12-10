@@ -76,11 +76,10 @@ function prove(propositions::Union{Set, Vector})
 end
 
 function _prove_simplified(propositions::Set)
-    @info propositions
     for p ∈ propositions
         pv = Symbolics.value(p)
 
-        if pv isa LogicalSymbol
+        if !istree(pv)
             # check for negation (contradiction)
             if any([isequal(¬p, q) for q ∈ propositions])
                 return false
@@ -104,7 +103,7 @@ function _prove_simplified(propositions::Set)
             else # unary operation (¬)
                 term_arg = first(term_args)
                 # if the argument is a term, throw an error. this should never happen since it was removed beforehand
-                if term_arg isa Term
+                if istree(term_arg)
                     throw(ErrorException("Improperly expanded predicate!"))
                 end
             end
