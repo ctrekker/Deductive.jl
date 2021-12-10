@@ -12,6 +12,9 @@ end
     @test ¬(true) == false
     @test ¬(false) == true
 
+    exported_operators = [:¬, :→, :⟶, :←, :⟵, :↔, :⟷, :∨, :∧]
+    @test all(isdefined.(repeat([PropositionalLogic], length(exported_operators)), exported_operators))
+
     @test_binary_operator ∨ (false, true, true, true)
     @test_binary_operator ∧ (false, false, false, true)
 

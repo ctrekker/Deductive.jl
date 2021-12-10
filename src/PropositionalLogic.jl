@@ -70,6 +70,7 @@ simplify_statement = Symbolics.RestartedChain([
 ])
 
 prove(proposition::SB) = prove([proposition])
+prove(propositions...) = prove([propositions...])
 function prove(propositions::Union{Set, Vector})
     simplified_propositions = Set(simplify.(propositions; rewriter=simplify_statement))
     return _prove_simplified(simplified_propositions)
