@@ -69,13 +69,12 @@ simplify_statement = Symbolics.RestartedChain([
     negated_material_equivalence
 ])
 
-function prove(proposition::SB)
-    prove(Set{SB}([proposition]))
-end
+prove(proposition::SB) = prove([proposition])
 function prove(propositions::Union{Set, Vector})
     simplified_propositions = Set(simplify.(propositions; rewriter=simplify_statement))
     return _prove_simplified(simplified_propositions)
 end
+
 function _prove_simplified(propositions::Set)
     @info propositions
     for p ∈ propositions
@@ -111,7 +110,7 @@ function _prove_simplified(propositions::Set)
             end
         end
     end
-
+    
     return true
 end
 
