@@ -8,6 +8,25 @@ Currently this package is unregistered in Julia's general registry. Instead inst
 ```
 
 ## Getting Started
+```julia
+using PropositionalLogic
+a, b = LogicalSymbol.([:a, :b])
+
+prove(a ∧ b)      # true
+prove(a ∧ b, ¬a)  # false, by contradiction
+
+println(truthtable(a ∧ b))
+#= Outputs:
+ Row │ a      b      a ∧ b 
+     │ Bool   Bool   Bool  
+─────┼─────────────────────
+   1 │ false  false  false
+   2 │  true  false  false
+   3 │ false   true  false
+   4 │  true   true   true
+=#
+```
+
 Several operators are exported and their use is required in defining statements.
 
 | Symbol | Completion Sequence | Description                                                                |
