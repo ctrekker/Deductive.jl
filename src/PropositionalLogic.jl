@@ -5,7 +5,7 @@ using Symbolics: Sym, Symbolic, Term
 using DataFrames
 
 export LogicalSymbol, truthtable, prove
-export ¬, →, ⟶, ←, ⟵, ↔, ⟷, ∨, ∧
+export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
 
 LogicalSymbol = Sym{Bool}
 SB = Union{LogicalSymbol, Term}
@@ -20,7 +20,7 @@ SB = Union{LogicalSymbol, Term}
 
 →(p::Bool, q::Bool) = ¬p ∨ q  # material implication
 →(p::SB, q::SB) = Term(→, [p, q])
-⟶ = →
+⟶ = ⟹ = →
 
 ←(p::Bool, q::Bool) = p ∨ ¬q  # material implication
 ←(p::SB, q::SB) = Term(←, [p, q])
@@ -28,7 +28,7 @@ SB = Union{LogicalSymbol, Term}
 
 ⟷(p::Bool, q::Bool) = (p ∧ q) ∨ (¬p ∧ ¬q)  # material implication
 ⟷(p::SB, q::SB) = Term(⟷, [p, q])
-↔ = ⟷
+↔ = ⇔ = ⟷
 
 
 function truthtable(st::SB)
