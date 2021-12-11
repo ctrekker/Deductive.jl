@@ -1,5 +1,5 @@
-# PropositionalLogic.jl
-Simple package for expressing and proving logical statements symbolically in Julia
+# Deductive.jl
+Simple package for expressing and proving zeroth order and first order logical statements symbolically in Julia
 
 ## Installation
 Currently this package is unregistered in Julia's general registry. Instead install through this repository directly.
@@ -9,7 +9,7 @@ Currently this package is unregistered in Julia's general registry. Instead inst
 
 ## Getting Started
 ```julia
-using PropositionalLogic
+using Deductive
 a, b = LogicalSymbol.([:a, :b])
 
 prove(a ∧ b)      # true

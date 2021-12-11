@@ -1,4 +1,4 @@
-module PropositionalLogic
+module Deductive
 
 using Symbolics
 using Symbolics: Sym, Symbolic, Term
@@ -6,6 +6,7 @@ using DataFrames
 
 export LogicalSymbol, truthtable, prove
 export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
+export Ē, Ā
 
 LogicalSymbol = Sym{Bool}
 SB = Union{LogicalSymbol, Term}
@@ -29,6 +30,11 @@ SB = Union{LogicalSymbol, Term}
 ⟷(p::Bool, q::Bool) = (p ∧ q) ∨ (¬p ∧ ¬q)  # material implication
 ⟷(p::SB, q::SB) = Term(⟷, [p, q])
 ↔ = ⇔ = ⟷
+
+
+# quantifiers
+Ē(x::SB) = Term(Ē, [x])
+Ā(x::SB) = Term(Ā, [x])
 
 
 function truthtable(st::SB)
