@@ -1,5 +1,5 @@
 # Deductive.jl
-Simple package for expressing and proving zeroth order and first order logical statements symbolically in Julia
+Simple package for expressing and proving [zeroth order](https://en.wikipedia.org/wiki/Propositional_calculus) and [first order](https://en.wikipedia.org/wiki/First-order_logic) logical statements and theorems symbolically in Julia
 
 ## Installation
 Currently this package is unregistered in Julia's general registry. Instead install through this repository directly.
