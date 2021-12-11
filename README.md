@@ -13,7 +13,7 @@ using Deductive
 a, b = LogicalSymbol.([:a, :b])
 
 prove(a ∧ b)      # true
-prove(a ∧ b, ¬a)  # false, by contradiction
+prove(a ∧ b, ¬a)  # false, because contradiction
 
 println(truthtable(a ∧ b))
 #= Outputs:
