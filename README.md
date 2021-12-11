@@ -16,4 +16,4 @@ Several operators are exported and their use is required in defining statements.
 | ∧      | \wedge              | [Logical Conjunction](https://en.wikipedia.org/wiki/Logical_conjunction)   |
 | ∨      | \vee                | [Logical Disjunction](https://en.wikipedia.org/wiki/Logical_disjunction)   |
 | →      | \rightarrow         | [Material Implication](https://en.wikipedia.org/wiki/Material_conditional) |
-| ↔      | \leftrightarrow     | [Material Equivalence](https://en.wikipedia.org/wiki/If_and_only_if)       |
+| ⟷      | \leftrightarrow     | [Material Equivalence](https://en.wikipedia.org/wiki/If_and_only_if)       |
