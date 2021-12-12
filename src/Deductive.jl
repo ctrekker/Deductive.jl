@@ -4,12 +4,16 @@ using Symbolics
 using Symbolics: Sym, Symbolic, Term
 using DataFrames
 
-export LogicalSymbol, truthtable, prove
+export FreeVariable, LogicalSymbol, Predicate, truthtable, prove
 export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
 export Ē, Ā
 
+FreeVariable = Sym{Any}
 LogicalSymbol = Sym{Bool}
 SB = Union{LogicalSymbol, Term}
+
+Predicate(sym::Symbol) = (st) -> Term{Bool}(LogicalSymbol(sym), [st]; metadata=:predicate)
+
 
 ∨(p::Bool, q::Bool) = p || q
 ∨(p::SB, q::SB) = Term(∨, [p, q])
@@ -33,8 +37,12 @@ SB = Union{LogicalSymbol, Term}
 
 
 # quantifiers
-Ē(x::SB) = Term(Ē, [x])
-Ā(x::SB) = Term(Ā, [x])
+Ē(x::FreeVariable, st::SB) = Term(Ē, [x, st])
+Ā(x::FreeVariable, st::SB) = Term(Ā, [x, st])
+
+# free variable unary "placeholder"
+# marker for substitution with a skolem variable
+_f = FreeVariable(:_f)
 
 
 function truthtable(st::SB)
@@ -63,6 +71,12 @@ negated_reverse_material_implication = @rule ¬(~p ← ~q) => ¬~p ∧ ~q
 material_equivalence = @rule ~p ⟷ ~q => (~p ∧ ~q) ∨ (¬~p ∧ ¬~q)
 negated_material_equivalence = @rule ¬(~p ⟷ ~q) => (~p ∧ ¬~q) ∨ (¬~p ∧ ~q)
 
+# These rules require some extra things, such as substitution by skolem constants after rule application
+deny_universal =     @rule ¬Ā(~x, ~y) => ¬~y
+assert_existential = @rule  Ē(~x, ~y) =>  ~y
+assert_universal =   @rule  Ā(~x, ~y) =>  ~y
+deny_existential =   @rule ¬Ē(~x, ~y) => ¬~y
+
 simplify_statement = Symbolics.RestartedChain([
     demorgan_and,
     demorgan_or,
@@ -77,17 +91,18 @@ simplify_statement = Symbolics.RestartedChain([
 
 prove(proposition::SB) = prove([proposition])
 prove(propositions...) = prove([propositions...])
-function prove(propositions::Union{Set, Vector})
+function prove(propositions::Union{Set, Vector}; skolem_vars=[])
     simplified_propositions = Set(simplify.(propositions; rewriter=simplify_statement))
-    return _prove_simplified(simplified_propositions)
+    return _prove_simplified(simplified_propositions; skolem_vars=skolem_vars)
 end
 
-function _prove_simplified(propositions::Set)
+function _prove_simplified(propositions::Set; skolem_vars=[])
+    @info propositions
     for p ∈ propositions
         pv = Symbolics.value(p)
 
-        if !istree(pv)
-            # check for negation (contradiction)
+        if !istree(pv) || pv.metadata == :predicate
+            # check for contradiction
             if any([isequal(¬p, q) for q ∈ propositions])
                 return false
             end
@@ -98,20 +113,56 @@ function _prove_simplified(propositions::Set)
             if length(term_args) == 2 # binary operation
                 if term_op == ∧
                     # break up term and make one recursive call
-                    if !prove(reduced_propositions ∪ Set(term_args))
+                    if !prove(reduced_propositions ∪ Set(term_args); skolem_vars=skolem_vars)
                         return false
                     end
+                    break
                 elseif term_op == ∨
                     # consider both arguments of term and make two recursive calls
-                    if !prove(reduced_propositions ∪ Set([term_args[1]])) && !prove(reduced_propositions ∪ Set([term_args[2]]))
+                    if !prove(reduced_propositions ∪ Set([term_args[1]]); skolem_vars=skolem_vars) && !prove(reduced_propositions ∪ Set([term_args[2]]); skolem_vars=skolem_vars)
                         return false
                     end
+                    break
+                elseif term_op == Ā  # universal quantifier
+                    placeholder_assertion = substitute(term_args[2], term_args[1] => _f)
+                    realized_assertions = [substitute(term_args[2], term_args[1] => skolem_var) for skolem_var ∈ skolem_vars]
+                    if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]))
+                        return false
+                    end
+                    break
+                elseif term_op == Ē  # existential quantifier
+                    new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)))
+                    new_assertion = substitute(term_args[2], term_args[1] => new_skolem_var)
+                    realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
+                    if !prove(reduced_propositions ∪ realized_placeholders ∪ Set([new_assertion]); skolem_vars=[skolem_vars..., new_skolem_var])
+                        return false
+                    end
+                    break
                 end
-            else # unary operation (¬)
-                term_arg = first(term_args)
-                # if the argument is a term, throw an error. this should never happen since it was removed beforehand
-                if istree(term_arg)
-                    throw(ErrorException("Improperly expanded predicate!"))
+            else # unary operation (¬, logical statements)
+                subterm = first(term_args)
+
+                if subterm isa Term
+                    subterm_op = operation(subterm)
+                    subterm_args = arguments(subterm)
+
+                    # check for negated quantifiers
+                    if subterm_op == Ā  # denied universal quantifier
+                        new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)))
+                        new_assertion = ¬substitute(subterm_args[2], subterm_args[1] => new_skolem_var)
+                        realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
+                        if !prove(reduced_propositions ∪ realized_placeholders ∪ Set([new_assertion]); skolem_vars=[skolem_vars..., new_skolem_var])
+                            return false
+                        end
+                        break
+                    elseif subterm_op == Ē  # denied existential quantifier
+                        placeholder_assertion = ¬substitute(term_args[2], term_args[1] => _f)
+                        realized_assertions = [¬substitute(term_args[2], term_args[1] => skolem_var) for skolem_var ∈ skolem_vars]
+                        if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]))
+                            return false
+                        end
+                        break
+                    end
                 end
             end
         end
