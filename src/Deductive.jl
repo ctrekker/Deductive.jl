@@ -97,7 +97,6 @@ function prove(propositions::Union{Set, Vector}; skolem_vars=[])
 end
 
 function _prove_simplified(propositions::Set; skolem_vars=[])
-    @info propositions
     for p ∈ propositions
         pv = Symbolics.value(p)
 

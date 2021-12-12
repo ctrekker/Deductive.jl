@@ -1,5 +1,5 @@
 using Test
-using PropositionalLogic
+using Deductive
 
 include("operators.jl")
 include("truthtable.jl")
