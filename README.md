@@ -8,6 +8,7 @@ Currently this package is unregistered in Julia's general registry. Instead inst
 ```
 
 ## Getting Started
+### Propositional Logic (zeroth order)
 ```julia
 using Deductive
 a, b = LogicalSymbol.([:a, :b])
@@ -36,3 +37,30 @@ Several operators are exported and their use is required in defining statements.
 | ∨      | \vee                | [Logical Disjunction](https://en.wikipedia.org/wiki/Logical_disjunction)   |
 | →      | \rightarrow         | [Material Implication](https://en.wikipedia.org/wiki/Material_conditional) |
 | ⟷      | \leftrightarrow     | [Material Equivalence](https://en.wikipedia.org/wiki/If_and_only_if)       |
+
+### Predicate Logic (first order)
+With predicates, statements like "for all x, P(x) is true" can be written. Due to some Julia parser issues, defining a function with the symbols for universal (∀) and existential (∃) quantification isn't possible. Instead we settle for the symbols Ā (typed A\bar) and Ē (typed (E\bar)). Here's an example of their use:
+
+```julia
+using Deductive
+
+x = FreeVariable(:x)
+P = Proposition(:P)
+
+Ā(x, P(x))  # like saying "for all x, P(x) is true"
+Ē(x, P(x))  # like saying "for some x, P(x) is true"
+¬Ē(x, ¬P(x))  # like saying "there does not exist x such that P(x) is false", which is equivalent to Ā(x, P(x))
+```
+
+As an interesting example, the equivalence between Ā(x, P(x)) and ¬Ē(x, ¬P(x)) can be proven as a tautology within this package using the `prove` function. This logical equivalence can be expressed as a statement Ā(x, P(x)) ⟷ ¬Ē(x, ¬P(x)), or "for all x, P(x) is true if and only if there does not exist any x such that P(x) is false".
+
+```julia
+using Deductive
+
+x = FreeVariable(:x)
+P = Proposition(:P)
+
+my_statement = Ā(x, P(x)) ⟷ ¬(Ē(x, ¬P(x)))
+# prove by contradiction
+prove(¬my_statement)  # returns false, since the contradiction of a tautology is always false
+```
