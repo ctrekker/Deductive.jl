@@ -18,8 +18,8 @@ jobs:
     # continue-on-error: true
     strategy:
       matrix:
-        julia-version: ["1.6", "1.7", "nightly"]
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        julia-version: ["1.7", "nightly"]
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v2
