@@ -155,8 +155,8 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
                         end
                         break
                     elseif subterm_op == Ē  # denied existential quantifier
-                        placeholder_assertion = ¬substitute(term_args[2], term_args[1] => _f)
-                        realized_assertions = [¬substitute(term_args[2], term_args[1] => skolem_var) for skolem_var ∈ skolem_vars]
+                        placeholder_assertion = ¬substitute(subterm_args[2], subterm_args[1] => _f)
+                        realized_assertions = [¬substitute(subterm_args[2], subterm_args[1] => skolem_var) for skolem_var ∈ skolem_vars]
                         if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]))
                             return false
                         end
