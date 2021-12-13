@@ -2,7 +2,7 @@ module Deductive
 
 using Symbolics
 using Symbolics: Sym, Symbolic, Term
-using DataFrames
+using DataFrames, PrettyTables
 
 export FreeVariable, LogicalSymbol, Predicate, truthtable, tableau, prove
 export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
@@ -83,7 +83,7 @@ end
 
 # proof utilities
 struct ProofLine
-    line::Int
+    linenum::Int
     statement::SB
     argument::String
     references::Vector{ProofLine}
@@ -94,6 +94,20 @@ end
 function ProofLine(line::Int, statement::SB, argument::String, reference::ProofLine)
     ProofLine(line, statement, argument, [reference])
 end
+# in most cases this shouldn't get shown since we also override Base.show(::IO, ::Vector{ProofLine})
+# put another way, this is the best we can print out a proof line without context from the proof itself
+function Base.show(io::IO, line::ProofLine)
+    print(io, line.linenum)
+    print(io, "\t")
+    print(io, replace(string(line.statement), "Deductive." => ""))
+    print(io, "\t")
+    print(io, line.argument)
+    
+    if length(line.references) > 0
+        print(io, "\t")
+        print(io, "(" * join([string(ref.linenum) for ref ∈ line.references], ", ") * ")")
+    end
+end
 
 function find_proof_line_by_statement(proof::Vector{ProofLine}, statement::SB)
     for line ∈ proof
@@ -103,6 +117,23 @@ function find_proof_line_by_statement(proof::Vector{ProofLine}, statement::SB)
     end
 
     nothing
+end
+
+
+function Base.show(io::IO, m::MIME"text/plain", proof::Vector{ProofLine})
+    proof_table = DataFrame("Line Number" => Int[], "Statement" => String[], "Argument" => String[], "References" => String[])
+
+    for line ∈ proof
+        push!(proof_table, Dict(
+            "Line Number" => line.linenum,
+            "Statement" => replace(string(line.statement), "Deductive." => ""),
+            "Argument" => line.argument,
+            "References" => join([string(ref.linenum) for ref ∈ line.references], ", ")
+        ))
+    end
+
+    # display_size=(-1, -1) forces pretty_table to print all rows and columns regardless of screen size
+    pretty_table(io, proof_table; display_size=(-1, -1))
 end
 
 
