@@ -4,7 +4,7 @@ using Symbolics
 using Symbolics: Sym, Symbolic, Term
 using DataFrames
 
-export FreeVariable, LogicalSymbol, Predicate, truthtable, prove
+export FreeVariable, LogicalSymbol, Predicate, truthtable, tableau
 export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
 export Ē, Ā
 
@@ -103,17 +103,37 @@ simplify_statement = Symbolics.RestartedChain([
     negated_material_equivalence
 ])
 
-prove(proposition::SB) = prove([proposition])
-prove(propositions...) = prove([propositions...])
-function prove(propositions::Union{Set, Vector}; skolem_vars=[])
+tableau(proposition::SB) = tableau([proposition])
+tableau(propositions...) = tableau([propositions...])
+function tableau(propositions::Union{Set, Vector}; skolem_vars=[])
     simplified_propositions = Set(simplify.(propositions; rewriter=simplify_statement))
-    return _prove_simplified(simplified_propositions; skolem_vars=skolem_vars)
+    return _tableau_simplified(simplified_propositions; skolem_vars=skolem_vars)
 end
 
-function _prove_simplified(propositions::Set; skolem_vars=[])
+function _tableau_simplified(propositions::Set; skolem_vars=[])
     free_vars = collect(Iterators.flatten([Symbolics.get_variables(p) for p ∈ propositions]))
     free_vars = filter([istree(v) ? first(arguments(v)) : v for v ∈ free_vars]) do v
         v.metadata == :free
+    end
+
+    function substitute_quantified(term::Term, substitution::FreeVariableType)
+        term_args = arguments(term)
+        substitute(term_args[2], term_args[1] => substitution)
+    end
+
+    function populate_skolems(term::Term, unary_operator=identity)
+        placeholder_assertion = unary_operator(substitute_quantified(term, _f))
+        realized_assertions = [unary_operator(substitute_quantified(term, var)) for var ∈ Iterators.flatten([skolem_vars, free_vars])]
+
+        Set([placeholder_assertion, realized_assertions...])
+    end
+
+    function create_skolem(term::Term, reduced_propositions, unary_operator=identity)
+        new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
+        new_assertion = unary_operator(substitute_quantified(term, new_skolem_var))
+        realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
+
+        new_skolem_var, Set([realized_placeholders..., new_assertion])
     end
 
     for p ∈ propositions
@@ -128,31 +148,28 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
             term_op = operation(pv)
             term_args = arguments(pv)
             reduced_propositions = setdiff(propositions, Set([p]))
+
             if length(term_args) == 2 # binary operation
                 if term_op == ∧
                     # break up term and make one recursive call
-                    if !prove(reduced_propositions ∪ Set(term_args); skolem_vars=skolem_vars)
+                    if !tableau(reduced_propositions ∪ Set(term_args); skolem_vars=skolem_vars)
                         return false
                     end
                     break
                 elseif term_op == ∨
                     # consider both arguments of term and make two recursive calls
-                    if !prove(reduced_propositions ∪ Set([term_args[1]]); skolem_vars=skolem_vars) && !prove(reduced_propositions ∪ Set([term_args[2]]); skolem_vars=skolem_vars)
+                    if !tableau(reduced_propositions ∪ Set([term_args[1]]); skolem_vars=skolem_vars) && !tableau(reduced_propositions ∪ Set([term_args[2]]); skolem_vars=skolem_vars)
                         return false
                     end
                     break
                 elseif term_op == Ā  # universal quantifier
-                    placeholder_assertion = substitute(term_args[2], term_args[1] => _f)
-                    realized_assertions = [substitute(term_args[2], term_args[1] => var) for var ∈ Iterators.flatten([skolem_vars, free_vars])]
-                    if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]); skolem_vars=skolem_vars)
+                    if !tableau(reduced_propositions ∪ populate_skolems(pv); skolem_vars=skolem_vars)
                         return false
                     end
                     break
                 elseif term_op == Ē  # existential quantifier
-                    new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
-                    new_assertion = substitute(term_args[2], term_args[1] => new_skolem_var)
-                    realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
-                    if !prove(reduced_propositions ∪ realized_placeholders ∪ Set([new_assertion]); skolem_vars=[skolem_vars..., new_skolem_var])
+                    new_skolem_var, new_propositions = create_skolem(pv, reduced_propositions)
+                    if !tableau(reduced_propositions ∪ new_propositions; skolem_vars=[skolem_vars..., new_skolem_var])
                         return false
                     end
                     break
@@ -162,21 +179,16 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
 
                 if istree(subterm)
                     subterm_op = operation(subterm)
-                    subterm_args = arguments(subterm)
 
                     # check for negated quantifiers
                     if subterm_op == Ā  # denied universal quantifier
-                        new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
-                        new_assertion = ¬substitute(subterm_args[2], subterm_args[1] => new_skolem_var)
-                        realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
-                        if !prove(reduced_propositions ∪ realized_placeholders ∪ Set([new_assertion]); skolem_vars=[skolem_vars..., new_skolem_var])
+                        new_skolem_var, new_propositions = create_skolem(subterm, reduced_propositions, ¬)
+                        if !tableau(reduced_propositions ∪ new_propositions; skolem_vars=[skolem_vars..., new_skolem_var])
                             return false
                         end
                         break
                     elseif subterm_op == Ē  # denied existential quantifier
-                        placeholder_assertion = ¬substitute(subterm_args[2], subterm_args[1] => _f)
-                        realized_assertions = [¬substitute(subterm_args[2], subterm_args[1] => skolem_var) for skolem_var ∈ Iterators.flatten([skolem_vars, free_vars])]
-                        if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]); skolem_vars=skolem_vars)
+                        if !tableau(reduced_propositions ∪ populate_skolems(subterm, ¬); skolem_vars=skolem_vars)
                             return false
                         end
                         break
