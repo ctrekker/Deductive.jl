@@ -8,11 +8,19 @@ export FreeVariable, LogicalSymbol, Predicate, truthtable, prove
 export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
 export Ē, Ā
 
-FreeVariable = Sym{Any}
+function FreeVariable(sym::Symbol, metadata::Symbol)
+    Sym{Any, Symbol}(sym, metadata)
+end
+function FreeVariable(sym::Symbol)
+    FreeVariable(sym, :free)
+end
+FreeVariableType = Sym{Any}
 LogicalSymbol = Sym{Bool}
 SB = Union{LogicalSymbol, Term}
 
-Predicate(sym::Symbol) = (st) -> Term{Bool}(LogicalSymbol(sym), [st]; metadata=:predicate)
+Predicate(sym::Symbol) = (st) -> begin
+    Term{Bool}(LogicalSymbol(sym), [st]; metadata=:predicate)
+end
 
 
 ∨(p::Bool, q::Bool) = p || q
@@ -37,12 +45,18 @@ Predicate(sym::Symbol) = (st) -> Term{Bool}(LogicalSymbol(sym), [st]; metadata=:
 
 
 # quantifiers
-Ē(x::FreeVariable, st::SB) = Term(Ē, [x, st])
-Ā(x::FreeVariable, st::SB) = Term(Ā, [x, st])
+function Ē(x::FreeVariableType, st::SB)
+    quantified_var = Sym{Any, Symbol}(Symbolics.tosymbol(x), :quantified)
+    Term(Ē, [quantified_var, substitute(st, x => quantified_var)])
+end
+function Ā(x::FreeVariableType, st::SB)
+    quantified_var = Sym{Any, Symbol}(Symbolics.tosymbol(x), :quantified)
+    Term(Ā, [quantified_var, substitute(st, x => quantified_var)])
+end
 
 # free variable unary "placeholder"
 # marker for substitution with a skolem variable
-_f = FreeVariable(:_f)
+_f = FreeVariable(:_f, :definitionallyfree)
 
 
 function truthtable(st::SB)
@@ -97,12 +111,24 @@ function prove(propositions::Union{Set, Vector}; skolem_vars=[])
 end
 
 function _prove_simplified(propositions::Set; skolem_vars=[])
+    @info propositions
+    free_vars = collect(Iterators.flatten([Symbolics.get_variables(p) for p ∈ propositions]))
+    free_vars = filter([istree(v) ? first(arguments(v)) : v for v ∈ free_vars]) do v
+        v.metadata == :free
+    end
+    # @info free_vars
+
     for p ∈ propositions
         pv = Symbolics.value(p)
 
         if !istree(pv) || pv.metadata == :predicate
             # check for contradiction
-            if any([isequal(¬p, q) for q ∈ propositions])
+            
+            if any([begin
+                # @info ¬p q
+                # @info isequal(¬p, q)
+                isequal(¬p, q)
+            end for q ∈ propositions])
                 return false
             end
         else
@@ -124,13 +150,13 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
                     break
                 elseif term_op == Ā  # universal quantifier
                     placeholder_assertion = substitute(term_args[2], term_args[1] => _f)
-                    realized_assertions = [substitute(term_args[2], term_args[1] => skolem_var) for skolem_var ∈ skolem_vars]
+                    realized_assertions = [substitute(term_args[2], term_args[1] => var) for var ∈ Iterators.flatten([skolem_vars, free_vars])]
                     if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]))
                         return false
                     end
                     break
                 elseif term_op == Ē  # existential quantifier
-                    new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)))
+                    new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
                     new_assertion = substitute(term_args[2], term_args[1] => new_skolem_var)
                     realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
                     if !prove(reduced_propositions ∪ realized_placeholders ∪ Set([new_assertion]); skolem_vars=[skolem_vars..., new_skolem_var])
@@ -147,7 +173,7 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
 
                     # check for negated quantifiers
                     if subterm_op == Ā  # denied universal quantifier
-                        new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)))
+                        new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
                         new_assertion = ¬substitute(subterm_args[2], subterm_args[1] => new_skolem_var)
                         realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
                         if !prove(reduced_propositions ∪ realized_placeholders ∪ Set([new_assertion]); skolem_vars=[skolem_vars..., new_skolem_var])
@@ -156,7 +182,7 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
                         break
                     elseif subterm_op == Ē  # denied existential quantifier
                         placeholder_assertion = ¬substitute(subterm_args[2], subterm_args[1] => _f)
-                        realized_assertions = [¬substitute(subterm_args[2], subterm_args[1] => skolem_var) for skolem_var ∈ skolem_vars]
+                        realized_assertions = [¬substitute(subterm_args[2], subterm_args[1] => skolem_var) for skolem_var ∈ Iterators.flatten([skolem_vars, free_vars])]
                         if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]))
                             return false
                         end
