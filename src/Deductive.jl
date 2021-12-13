@@ -54,6 +54,12 @@ function Ā(x::FreeVariableType, st::SB)
     Term(Ā, [quantified_var, substitute(st, x => quantified_var)])
 end
 
+function substitute_quantified(term::Term, substitution::FreeVariableType)
+    term_args = arguments(term)
+    substitute(term_args[2], term_args[1] => substitution)
+end
+
+
 # free variable unary "placeholder"
 # marker for substitution with a skolem variable
 _f = FreeVariable(:_f, :definitionallyfree)
@@ -111,16 +117,13 @@ function tableau(propositions::Union{Set, Vector}; skolem_vars=[])
 end
 
 function _tableau_simplified(propositions::Set; skolem_vars=[])
+    # compile list of all free variables in all propositions
     free_vars = collect(Iterators.flatten([Symbolics.get_variables(p) for p ∈ propositions]))
     free_vars = filter([istree(v) ? first(arguments(v)) : v for v ∈ free_vars]) do v
         v.metadata == :free
     end
 
-    function substitute_quantified(term::Term, substitution::FreeVariableType)
-        term_args = arguments(term)
-        substitute(term_args[2], term_args[1] => substitution)
-    end
-
+    # when a quantifier is simplified we find existing skolem variables and substitute them in for universal free variables
     function populate_skolems(term::Term, unary_operator=identity)
         placeholder_assertion = unary_operator(substitute_quantified(term, _f))
         realized_assertions = [unary_operator(substitute_quantified(term, var)) for var ∈ Iterators.flatten([skolem_vars, free_vars])]
@@ -128,6 +131,8 @@ function _tableau_simplified(propositions::Set; skolem_vars=[])
         Set([placeholder_assertion, realized_assertions...])
     end
 
+    # when a quantifier is simplified a new skolem variable can be created in some cases
+    # this function creates a new skolem variable and substitutes it into all free variable predicates
     function create_skolem(term::Term, reduced_propositions, unary_operator=identity)
         new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
         new_assertion = unary_operator(substitute_quantified(term, new_skolem_var))
