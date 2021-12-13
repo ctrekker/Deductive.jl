@@ -111,24 +111,17 @@ function prove(propositions::Union{Set, Vector}; skolem_vars=[])
 end
 
 function _prove_simplified(propositions::Set; skolem_vars=[])
-    @info propositions
     free_vars = collect(Iterators.flatten([Symbolics.get_variables(p) for p ∈ propositions]))
     free_vars = filter([istree(v) ? first(arguments(v)) : v for v ∈ free_vars]) do v
         v.metadata == :free
     end
-    # @info free_vars
 
     for p ∈ propositions
         pv = Symbolics.value(p)
 
         if !istree(pv) || pv.metadata == :predicate
             # check for contradiction
-            
-            if any([begin
-                # @info ¬p q
-                # @info isequal(¬p, q)
-                isequal(¬p, q)
-            end for q ∈ propositions])
+            if any([isequal(¬p, q) for q ∈ propositions])
                 return false
             end
         else
@@ -151,7 +144,7 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
                 elseif term_op == Ā  # universal quantifier
                     placeholder_assertion = substitute(term_args[2], term_args[1] => _f)
                     realized_assertions = [substitute(term_args[2], term_args[1] => var) for var ∈ Iterators.flatten([skolem_vars, free_vars])]
-                    if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]))
+                    if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]); skolem_vars=skolem_vars)
                         return false
                     end
                     break
@@ -167,7 +160,7 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
             else # unary operation (¬, logical statements)
                 subterm = first(term_args)
 
-                if subterm isa Term
+                if istree(subterm)
                     subterm_op = operation(subterm)
                     subterm_args = arguments(subterm)
 
@@ -183,7 +176,7 @@ function _prove_simplified(propositions::Set; skolem_vars=[])
                     elseif subterm_op == Ē  # denied existential quantifier
                         placeholder_assertion = ¬substitute(subterm_args[2], subterm_args[1] => _f)
                         realized_assertions = [¬substitute(subterm_args[2], subterm_args[1] => skolem_var) for skolem_var ∈ Iterators.flatten([skolem_vars, free_vars])]
-                        if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]))
+                        if !prove(reduced_propositions ∪ Set([placeholder_assertion, realized_assertions...]); skolem_vars=skolem_vars)
                             return false
                         end
                         break
