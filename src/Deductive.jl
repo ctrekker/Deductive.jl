@@ -4,7 +4,7 @@ using Symbolics
 using Symbolics: Sym, Symbolic, Term
 using DataFrames
 
-export FreeVariable, LogicalSymbol, Predicate, truthtable, tableau
+export FreeVariable, LogicalSymbol, Predicate, truthtable, tableau, prove
 export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
 export Ē, Ā
 
@@ -81,6 +81,31 @@ function truthtable(st::SB)
 end
 
 
+# proof utilities
+struct ProofLine
+    line::Int
+    statement::SB
+    argument::String
+    references::Vector{ProofLine}
+end
+function ProofLine(line::Int, statement::SB, argument::String="N/A")
+    ProofLine(line, statement, argument, ProofLine[])
+end
+function ProofLine(line::Int, statement::SB, argument::String, reference::ProofLine)
+    ProofLine(line, statement, argument, [reference])
+end
+
+function find_proof_line_by_statement(proof::Vector{ProofLine}, statement::SB)
+    for line ∈ proof
+        if isequal(line.statement, statement)
+            return line
+        end
+    end
+
+    nothing
+end
+
+
 demorgan_and = @rule ¬(~p ∧ ~q) => ¬~p ∨ ¬~q
 demorgan_or = @rule ¬(~p ∨ ~q) => ¬~p ∧ ¬~q
 double_negative = @rule ¬¬~p => ~p
@@ -109,14 +134,27 @@ simplify_statement = Symbolics.RestartedChain([
     negated_material_equivalence
 ])
 
-tableau(proposition::SB) = tableau([proposition])
-tableau(propositions...) = tableau([propositions...])
-function tableau(propositions::Union{Set, Vector}; skolem_vars=[])
+
+tableau(proposition::SB; kw...) = tableau([proposition]; kw...)
+tableau(propositions...; kw...) = tableau([propositions...]; kw...)
+function tableau(propositions::Union{Set, Vector}; skolem_vars=[], proof::Vector{ProofLine}=ProofLine[])
+    if length(proof) == 0
+        for proposition ∈ propositions
+            push!(proof, ProofLine(length(proof) + 1, Symbolics.value(proposition), "Assumption"))
+        end
+    end
     simplified_propositions = Set(simplify.(propositions; rewriter=simplify_statement))
-    return _tableau_simplified(simplified_propositions; skolem_vars=skolem_vars)
+
+    for proposition ∈ simplified_propositions
+        if isnothing(find_proof_line_by_statement(proof, proposition))
+            push!(proof, ProofLine(length(proof) + 1, Symbolics.value(proposition), "Replacement Rule <TODO>"))
+        end
+    end
+
+    return _tableau_simplified(simplified_propositions; skolem_vars=skolem_vars, proof=proof)
 end
 
-function _tableau_simplified(propositions::Set; skolem_vars=[])
+function _tableau_simplified(propositions::Set; skolem_vars=[], proof::Vector{ProofLine}=ProofLine[])
     # compile list of all free variables in all propositions
     free_vars = collect(Iterators.flatten([Symbolics.get_variables(p) for p ∈ propositions]))
     free_vars = filter([istree(v) ? first(arguments(v)) : v for v ∈ free_vars]) do v
@@ -141,12 +179,26 @@ function _tableau_simplified(propositions::Set; skolem_vars=[])
         new_skolem_var, Set([realized_placeholders..., new_assertion])
     end
 
+    ordered_propositions = [propositions...]
     for p ∈ propositions
         pv = Symbolics.value(p)
 
         if !istree(pv) || pv.metadata == :predicate
             # check for contradiction
-            if any([isequal(¬p, q) for q ∈ propositions])
+            contradiction_index = findfirst([isequal(¬p, q) for q ∈ ordered_propositions])
+            if !isnothing(contradiction_index)
+                contradictory_statement = ordered_propositions[contradiction_index]
+                contradiction_references = [
+                    find_proof_line_by_statement(proof, pv),
+                    find_proof_line_by_statement(proof, contradictory_statement)
+                ]
+
+                if any(isnothing.(contradiction_references))
+                    @error "Contradiction found, but one or more references is missing"
+                else
+                    push!(proof, ProofLine(length(proof) + 1, p ∧ contradictory_statement, "Contradiction", contradiction_references))
+                end
+
                 return false
             end
         else
@@ -155,26 +207,43 @@ function _tableau_simplified(propositions::Set; skolem_vars=[])
             reduced_propositions = setdiff(propositions, Set([p]))
 
             if length(term_args) == 2 # binary operation
+                line_ref = find_proof_line_by_statement(proof, pv)
+
                 if term_op == ∧
                     # break up term and make one recursive call
-                    if !tableau(reduced_propositions ∪ Set(term_args); skolem_vars=skolem_vars)
+
+                    # add simplification to proof
+                    push!(proof, ProofLine(length(proof) + 1, term_args[1], "Simplification", line_ref))
+                    push!(proof, ProofLine(length(proof) + 1, term_args[2], "Simplification", line_ref))
+
+                    if !tableau(reduced_propositions ∪ Set(term_args); skolem_vars=skolem_vars, proof=proof)
                         return false
                     end
                     break
                 elseif term_op == ∨
                     # consider both arguments of term and make two recursive calls
-                    if !tableau(reduced_propositions ∪ Set([term_args[1]]); skolem_vars=skolem_vars) && !tableau(reduced_propositions ∪ Set([term_args[2]]); skolem_vars=skolem_vars)
+                    
+                    # case-by-case checking
+                    case1_linenum, case2_linenum = length(proof) + 1, length(proof) + 2
+                    push!(proof, ProofLine(case1_linenum, term_args[1], "Case 1", line_ref))
+                    push!(proof, ProofLine(case2_linenum, term_args[2], "Case 2", line_ref))
+
+                    if !tableau(reduced_propositions ∪ Set([term_args[1]]); skolem_vars=skolem_vars, proof=proof) && !tableau(reduced_propositions ∪ Set([term_args[2]]); skolem_vars=skolem_vars, proof=proof)
+                        push!(proof, ProofLine(length(proof) + 1, ¬pv ∧ pv, "Contradiction", [proof[case1_linenum], proof[case2_linenum]]))
+
                         return false
                     end
                     break
-                elseif term_op == Ā  # universal quantifier
-                    if !tableau(reduced_propositions ∪ populate_skolems(pv); skolem_vars=skolem_vars)
+                elseif term_op == Ā  # asserted universal quantifier
+                    # create free variable
+                    if !tableau(reduced_propositions ∪ populate_skolems(pv); skolem_vars=skolem_vars, proof=proof)
                         return false
                     end
                     break
-                elseif term_op == Ē  # existential quantifier
+                elseif term_op == Ē  # asserted existential quantifier
+                    # substitute skolem variable
                     new_skolem_var, new_propositions = create_skolem(pv, reduced_propositions)
-                    if !tableau(reduced_propositions ∪ new_propositions; skolem_vars=[skolem_vars..., new_skolem_var])
+                    if !tableau(reduced_propositions ∪ new_propositions; skolem_vars=[skolem_vars..., new_skolem_var], proof=proof)
                         return false
                     end
                     break
@@ -188,12 +257,12 @@ function _tableau_simplified(propositions::Set; skolem_vars=[])
                     # check for negated quantifiers
                     if subterm_op == Ā  # denied universal quantifier
                         new_skolem_var, new_propositions = create_skolem(subterm, reduced_propositions, ¬)
-                        if !tableau(reduced_propositions ∪ new_propositions; skolem_vars=[skolem_vars..., new_skolem_var])
+                        if !tableau(reduced_propositions ∪ new_propositions; skolem_vars=[skolem_vars..., new_skolem_var], proof=proof)
                             return false
                         end
                         break
                     elseif subterm_op == Ē  # denied existential quantifier
-                        if !tableau(reduced_propositions ∪ populate_skolems(subterm, ¬); skolem_vars=skolem_vars)
+                        if !tableau(reduced_propositions ∪ populate_skolems(subterm, ¬); skolem_vars=skolem_vars, proof=proof)
                             return false
                         end
                         break
@@ -205,6 +274,17 @@ function _tableau_simplified(propositions::Set; skolem_vars=[])
     
     return true
 end
+
+
+prove(proposition::SB; kw...) = prove([proposition]; kw...)
+prove(propositions...; kw...) = prove([propositions...]; kw...)
+function prove(propositions::Union{Set, Vector})
+    proof = ProofLine[]
+    tableau(propositions; proof=proof)
+
+    proof
+end
+
 
 _dict_from_combination_index(variables, index::Int) = Dict([variables[i] => Bool(index >> (i-1) & 1) for i ∈ 1:length(variables)])
 
