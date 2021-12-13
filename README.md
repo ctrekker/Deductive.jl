@@ -13,8 +13,8 @@ Currently this package is unregistered in Julia's general registry. Instead inst
 using Deductive
 a, b = LogicalSymbol.([:a, :b])
 
-prove(a ∧ b)      # true
-prove(a ∧ b, ¬a)  # false, because contradiction
+tableau(a ∧ b)      # true
+tableau(a ∧ b, ¬a)  # false, because contradiction
 
 println(truthtable(a ∧ b))
 #= Outputs:
@@ -52,7 +52,7 @@ Ē(x, P(x))  # like saying "for some x, P(x) is true"
 ¬Ē(x, ¬P(x))  # like saying "there does not exist x such that P(x) is false", which is equivalent to Ā(x, P(x))
 ```
 
-As an interesting example, the equivalence between Ā(x, P(x)) and ¬Ē(x, ¬P(x)) can be proven as a tautology within this package using the `prove` function. This logical equivalence can be expressed as a statement Ā(x, P(x)) ⟷ ¬Ē(x, ¬P(x)), or "for all x, P(x) is true if and only if there does not exist any x such that P(x) is false".
+As an interesting example, the equivalence between Ā(x, P(x)) and ¬Ē(x, ¬P(x)) can be proven as a tautology within this package using the `tableau` function. This logical equivalence can be expressed as a statement Ā(x, P(x)) ⟷ ¬Ē(x, ¬P(x)), or "for all x, P(x) is true if and only if there does not exist any x such that P(x) is false".
 
 ```julia
 using Deductive
@@ -62,5 +62,62 @@ P = Proposition(:P)
 
 my_statement = Ā(x, P(x)) ⟷ ¬(Ē(x, ¬P(x)))
 # prove by contradiction
-prove(¬my_statement)  # returns false, since the contradiction of a tautology is always false
+tableau(¬my_statement)  # returns false, since the contradiction of a tautology is always false
 ```
+
+### Generating Human-Readable Proofs (WIP)
+The method of analytic tableaux is a complete method for proving zeroth and first order logic problems. To export these proofs in human-readable form the `prove` function is exported. Instead of simply yielding a `true` or `false`, this function will return a full proof containing the steps taken to determine whether a set of propositions are consistent.
+
+```julia
+using Deductive
+
+a, b, c, d = LogicalSymbol.([:a, :b, :c, :d])
+
+# basic example from above
+prove(a ∧ b, ¬a)
+#= Output:
+┌─────────────┬───────────┬────────────────┬────────────┐
+│ Line Number │ Statement │       Argument │ References │
+│       Int64 │    String │         String │     String │
+├─────────────┼───────────┼────────────────┼────────────┤
+│           1 │     a ∧ b │     Assumption │            │
+│           2 │      ¬(a) │     Assumption │            │
+│           3 │         a │ Simplification │          1 │
+│           4 │         b │ Simplification │          1 │
+│           5 │  a ∧ ¬(a) │  Contradiction │       3, 2 │
+└─────────────┴───────────┴────────────────┴────────────┘
+=#
+
+# a far more fun example :)
+prove(a → b, b → c, c → d, a, ¬d)
+#= Output:
+┌─────────────┬──────────────────────────┬─────────────────────────┬────────────┐
+│ Line Number │                Statement │                Argument │ References │
+│       Int64 │                   String │                  String │     String │
+├─────────────┼──────────────────────────┼─────────────────────────┼────────────┤
+│           1 │                    a → b │              Assumption │            │
+│           2 │                    b → c │              Assumption │            │
+│           3 │                    c → d │              Assumption │            │
+│           4 │                        a │              Assumption │            │
+│           5 │                     ¬(d) │              Assumption │            │
+│           6 │                 ¬(c) ∨ d │ Replacement Rule <TODO> │            │
+│           7 │                 ¬(a) ∨ b │ Replacement Rule <TODO> │            │
+│           8 │                 ¬(b) ∨ c │ Replacement Rule <TODO> │            │
+│           9 │                     ¬(c) │                  Case 1 │          6 │
+│          10 │                        d │                  Case 2 │          6 │
+│          11 │                     ¬(a) │                  Case 1 │          7 │
+│          12 │                        b │                  Case 2 │          7 │
+│          13 │                 a ∧ ¬(a) │           Contradiction │      4, 11 │
+│          14 │                     ¬(b) │                  Case 1 │          8 │
+│          15 │                        c │                  Case 2 │          8 │
+│          16 │                 b ∧ ¬(b) │           Contradiction │     12, 14 │
+│          17 │                 c ∧ ¬(c) │           Contradiction │      15, 9 │
+│          18 │ ¬(¬(b) ∨ c) ∧ (¬(b) ∨ c) │           Contradiction │     14, 15 │
+│          19 │ ¬(¬(a) ∨ b) ∧ (¬(a) ∨ b) │           Contradiction │     11, 12 │
+│          20 │                 d ∧ ¬(d) │           Contradiction │      10, 5 │
+│          21 │ ¬(¬(c) ∨ d) ∧ (¬(c) ∨ d) │           Contradiction │      9, 10 │
+└─────────────┴──────────────────────────┴─────────────────────────┴────────────┘
+=#
+```
+
+As is clear from the second example, several arguments are missing regarding replacement rules, and the organization is rather poor. This feature is very much work in progress right now.
