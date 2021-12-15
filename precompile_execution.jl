@@ -1,3 +1,4 @@
 import Pkg
 Pkg.activate(".")
-Pkg.test()
+
+include("./test/runtests.jl")
