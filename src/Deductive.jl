@@ -320,4 +320,6 @@ end
 _dict_from_combination_index(variables, index::Int) = Dict([variables[i] => Bool(index >> (i-1) & 1) for i ∈ 1:length(variables)])
 
 
+include("./expression.jl")
+
 end # module
