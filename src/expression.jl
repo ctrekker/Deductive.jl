@@ -8,6 +8,8 @@ abstract type AbstractExpression end
 struct LogicalSymbol <: AbstractExpression
     name::Symbol
 end
+istree(::LogicalSymbol) = false
+isnode(::LogicalSymbol) = true
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
 
 
@@ -31,6 +33,8 @@ struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
 end
+istree(::LogicalExpression) = true
+isnode(::LogicalSymbol) = false
 operation(expr::LogicalExpression) = expr.operation
 arguments(expr::LogicalExpression) = expr.arguments
 
@@ -81,6 +85,9 @@ const ∧ = LogicalOperation(:∧, 2)
 const ∨ = LogicalOperation(:∨, 2)
 const → = LogicalOperation(:→, 2)
 const ⟷ = LogicalOperation(:⟷, 2)
+
+
+include("./replacement.jl")
 
 
 end # module
