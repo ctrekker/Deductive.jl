@@ -1,6 +1,6 @@
 using Test
 using Deductive
 
-include("operators.jl")
+include("expression.jl")
 include("truthtable.jl")
 include("proof.jl")

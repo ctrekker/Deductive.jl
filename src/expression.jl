@@ -1,4 +1,6 @@
-export ¬, ∧, ∨, →, ⟷, LogicalSymbol, istree, isnode, metadata, variables
+export ¬, ∧, ∨, →, ⟷
+export LogicalSymbol, istree, isnode, metadata, variables, operation, arguments
+export isunary, isbinary
 
 
 abstract type AbstractExpression end
@@ -13,7 +15,7 @@ isnode(::LogicalSymbol) = true
 metadata(sym::LogicalSymbol) = sym.metadata
 variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
-Base.isequal(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name
+Base.isequal(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
 Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, sym2.name)
 
 
@@ -102,4 +104,4 @@ const → = LogicalOperation((x, y) -> (¬x ∨ y), :→, 2)
 const ⟷ = LogicalOperation((x, y) -> (x ∧ y) ∨ (¬x ∧ ¬y), :⟷, 2)
 
 
-include("./replacement.jl")
+include("./manipulation.jl")
