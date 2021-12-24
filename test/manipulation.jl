@@ -42,7 +42,13 @@
         @test !matches(st3, ¬x)
     end
 
+    # TODO: Rename this from replace to something more relevant to rule application
     @testset "Replacement" begin
-
+        @test isequal(replace(a, x => ¬x), ¬a)
+        @test isequal(replace(a ∧ b, x => ¬x), ¬(a ∧ b))
+        @test isequal(replace(a ∧ a, (x ∧ x) => x), a)
+        @test isequal(replace(a → b, (x → y) => (¬x ∨ y)), ¬a ∨ b)
+        @test isequal(replace(a → ¬b, (x → y) => (¬x ∨ y)), ¬a ∨ ¬b)
+        @test isequal(replace(¬(a ∨ b) ∨ ¬(a ∧ b), (¬x ∨ ¬y) => ¬(x ∧ y)), ¬((a ∨ b) ∧ (a ∧ b)))
     end
 end
