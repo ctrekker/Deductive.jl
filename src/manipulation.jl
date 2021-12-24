@@ -18,7 +18,7 @@ function Base.replace(expr::AbstractExpression, rule::Pair{T, U}) where {T <: Ab
     reconstruct_replacement(rule.second, replacements)
 end
 
-matches(expr::AbstractExpression, pattern::AbstractExpression) = length(keys(find_matches(expr, pattern))) > 0
+matches(expr::AbstractExpression, pattern::AbstractExpression) = find_matches!(expr, pattern, Dict{LogicalSymbol, AbstractExpression}())
 
 function find_matches(expr::AbstractExpression, pattern::AbstractExpression)
     matches = Dict{LogicalSymbol, AbstractExpression}()
@@ -35,7 +35,11 @@ function find_matches!(expr::AbstractExpression, pattern::AbstractExpression, ma
         return all(find_matches!.(arguments(expr), arguments(pattern), Iterators.repeat([matches], length(arguments(expr)))))
     end
 
-    matches[pattern] = expr
+    if haskey(matches, pattern)
+        return isequal(matches[pattern], expr)
+    else
+        matches[pattern] = expr
+    end
     true
 end
 
