@@ -4,76 +4,88 @@ using Symbolics
 using Symbolics: Sym, Symbolic, Term
 using DataFrames, PrettyTables
 
-export FreeVariable, LogicalSymbol, Predicate, truthtable, tableau, prove
-export ¬, →, ⟶, ⟹, ←, ⟵, ↔, ⟷, ⇔, ∨, ∧
+export Predicate, truthtable, tableau, prove
 export Ē, Ā
 
-function FreeVariable(sym::Symbol, metadata::Symbol)
-    Sym{Any, Symbol}(sym, metadata)
-end
-function FreeVariable(sym::Symbol)
-    FreeVariable(sym, :free)
-end
-FreeVariableType = Sym{Any}
-LogicalSymbol = Sym{Bool}
-SB = Union{LogicalSymbol, Term}
 
-Predicate(sym::Symbol) = (st) -> begin
-    Term{Bool}(LogicalSymbol(sym), [st]; metadata=:predicate)
-end
+include("./expression.jl")
 
 
-∨(p::Bool, q::Bool) = p || q
-∨(p::SB, q::SB) = Term(∨, [p, q])
-∧(p::Bool, q::Bool) = p && q
-∧(p::SB, q::SB) = Term(∧, [p, q])
+# function FreeVariable(sym::Symbol, metadata::Symbol)
+#     Sym{Any, Symbol}(sym, metadata)
+# end
+# function FreeVariable(sym::Symbol)
+#     FreeVariable(sym, :free)
+# end
+FreeVariableType = LogicalSymbol
+# LogicalSymbol = Sym{Bool}
+# SB = Union{LogicalSymbol, Term}
 
-¬(x::Bool) = !x
-¬(x::SB) = Term(¬, [x])
+# Predicate(sym::Symbol) = (st) -> begin
+#     Term{Bool}(LogicalSymbol(sym), [st]; metadata=:predicate)
+# end
 
-→(p::Bool, q::Bool) = ¬p ∨ q  # material implication
-→(p::SB, q::SB) = Term(→, [p, q])
-⟶ = ⟹ = →
 
-←(p::Bool, q::Bool) = p ∨ ¬q  # material implication
-←(p::SB, q::SB) = Term(←, [p, q])
-⟵ = ←
+# ∨(p::Bool, q::Bool) = p || q
+# ∨(p::SB, q::SB) = Term(∨, [p, q])
+# ∧(p::Bool, q::Bool) = p && q
+# ∧(p::SB, q::SB) = Term(∧, [p, q])
 
-⟷(p::Bool, q::Bool) = (p ∧ q) ∨ (¬p ∧ ¬q)  # material implication
-⟷(p::SB, q::SB) = Term(⟷, [p, q])
-↔ = ⇔ = ⟷
+# ¬(x::Bool) = !x
+# ¬(x::SB) = Term(¬, [x])
+
+# →(p::Bool, q::Bool) = ¬p ∨ q  # material implication
+# →(p::SB, q::SB) = Term(→, [p, q])
+# ⟶ = ⟹ = →
+
+# ←(p::Bool, q::Bool) = p ∨ ¬q  # material implication
+# ←(p::SB, q::SB) = Term(←, [p, q])
+# ⟵ = ←
+
+# ⟷(p::Bool, q::Bool) = (p ∧ q) ∨ (¬p ∧ ¬q)  # material implication
+# ⟷(p::SB, q::SB) = Term(⟷, [p, q])
+# ↔ = ⇔ = ⟷
 
 
 # quantifiers
-function Ē(x::FreeVariableType, st::SB)
-    quantified_var = Sym{Any, Symbol}(Symbolics.tosymbol(x), :quantified)
-    Term(Ē, [quantified_var, substitute(st, x => quantified_var)])
-end
-function Ā(x::FreeVariableType, st::SB)
-    quantified_var = Sym{Any, Symbol}(Symbolics.tosymbol(x), :quantified)
-    Term(Ā, [quantified_var, substitute(st, x => quantified_var)])
-end
+# todo: fix quantifier logic
+Ē = LogicalOperation((n, m) -> nothing, :Ē, 2)
+Ā = LogicalOperation((n, m) -> nothing, :Ā, 2)
+# function Ē(x::FreeVariableType, st::AbstractExpression)
+#     quantified_var = Sym{Any, Symbol}(Symbolics.tosymbol(x), :quantified)
+#     AbstractExpression(Ē, [quantified_var, replace(st, x => quantified_var)])
+# end
+# function Ā(x::FreeVariableType, st::AbstractExpression)
+#     quantified_var = Sym{Any, Symbol}(Symbolics.tosymbol(x), :quantified)
+#     Term(Ā, [quantified_var, substitute(st, x => quantified_var)])
+# end
 
-function substitute_quantified(term::Term, substitution::FreeVariableType)
-    term_args = arguments(term)
-    substitute(term_args[2], term_args[1] => substitution)
-end
+# function substitute_quantified(term::Term, substitution::FreeVariableType)
+#     term_args = arguments(term)
+#     substitute(term_args[2], term_args[1] => substitution)
+# end
 
 
 # free variable unary "placeholder"
 # marker for substitution with a skolem variable
-_f = FreeVariable(:_f, :definitionallyfree)
+_f = LogicalSymbol(:_f, :definitionallyfree)
 
 
-function truthtable(st::SB)
-    variables = Symbolics.get_variables(st)
-    combinations = 2 ^ length(variables)
+function truthtable(st::AbstractExpression)
+    vars = sort([variables(st)...])
+    combinations = 2 ^ length(vars)
     st_sym = Symbol(string(st))
-    table = DataFrame(Dict(Symbol(var) => Bool[] for var ∈ variables)..., Dict(st_sym => Bool[])...)
+
+    # prevent duplicate table keys if the expression is, for example, "a"
+    if st_sym == Symbol(first(vars))
+        st_sym = Symbol("_" * string(st))
+    end
+
+    table = DataFrame(Dict(Symbol(var) => Bool[] for var ∈ vars)..., Dict(st_sym => Bool[])...)
 
     for i ∈ 0:(combinations-1)
-        variable_values = _dict_from_combination_index(variables, i)
-        result = substitute(st, variable_values)
+        variable_values = _dict_from_combination_index(vars, i)
+        result = evaluate(st, variable_values)
         push!(table, merge(Dict(Symbol(k) => v for (k, v) ∈ variable_values), Dict(st_sym => result)))
     end
 
@@ -84,14 +96,14 @@ end
 # proof utilities
 struct ProofLine
     linenum::Int
-    statement::SB
+    statement::AbstractExpression
     argument::String
     references::Vector{ProofLine}
 end
-function ProofLine(line::Int, statement::SB, argument::String="N/A")
+function ProofLine(line::Int, statement::AbstractExpression, argument::String="N/A")
     ProofLine(line, statement, argument, ProofLine[])
 end
-function ProofLine(line::Int, statement::SB, argument::String, reference::ProofLine)
+function ProofLine(line::Int, statement::AbstractExpression, argument::String, reference::ProofLine)
     ProofLine(line, statement, argument, [reference])
 end
 # in most cases this shouldn't get shown since we also override Base.show(::IO, ::Vector{ProofLine})
@@ -109,7 +121,7 @@ function Base.show(io::IO, line::ProofLine)
     end
 end
 
-function find_proof_line_by_statement(proof::Vector{ProofLine}, statement::SB)
+function find_proof_line_by_statement(proof::Vector{ProofLine}, statement::AbstractExpression)
     for line ∈ proof
         if isequal(line.statement, statement)
             return line
@@ -137,36 +149,34 @@ function Base.show(io::IO, m::MIME"text/plain", proof::Vector{ProofLine})
 end
 
 
-demorgan_and = @rule ¬(~p ∧ ~q) => ¬~p ∨ ¬~q
-demorgan_or = @rule ¬(~p ∨ ~q) => ¬~p ∧ ¬~q
-double_negative = @rule ¬¬~p => ~p
-material_implication = @rule ~p → ~q => ¬~p ∨ ~q
-reverse_material_implication = @rule ~p ← ~q => ~p ∨ ¬~q
-negated_material_implication = @rule ¬(~p → ~q) => ~p ∧ ¬~q
-negated_reverse_material_implication = @rule ¬(~p ← ~q) => ¬~p ∧ ~q
-material_equivalence = @rule ~p ⟷ ~q => (~p ∧ ~q) ∨ (¬~p ∧ ¬~q)
-negated_material_equivalence = @rule ¬(~p ⟷ ~q) => (~p ∧ ¬~q) ∨ (¬~p ∧ ~q)
+p, q = LogicalSymbol.([:p, :q])
+const demorgan_and = ¬(p ∧ q) => ¬p ∨ ¬q
+const demorgan_or = ¬(p ∨ q) => ¬p ∧ ¬q
+const double_negative = ¬¬p => p
+const material_implication = p → q => ¬p ∨ q
+const negated_material_implication = ¬(p → q) => p ∧ ¬q
+const material_equivalence = p ⟷ q => (p ∧ q) ∨ (¬p ∧ ¬q)
+const negated_material_equivalence = ¬(p ⟷ q) => (p ∧ ¬q) ∨ (¬p ∧ q)
 
-# These rules require some extra things, such as substitution by skolem constants after rule application
-deny_universal =     @rule ¬Ā(~x, ~y) => ¬~y
-assert_existential = @rule  Ē(~x, ~y) =>  ~y
-assert_universal =   @rule  Ā(~x, ~y) =>  ~y
-deny_existential =   @rule ¬Ē(~x, ~y) => ¬~y
-
-simplify_statement = Symbolics.RestartedChain([
+const tableau_replacement_rules = Pair{AbstractExpression, AbstractExpression}[
     demorgan_and,
     demorgan_or,
     double_negative,
     material_implication,
-    reverse_material_implication,
     negated_material_implication,
-    negated_reverse_material_implication,
     material_equivalence,
     negated_material_equivalence
-])
+]
+
+# These rules require some extra things, such as substitution by skolem constants after rule application
+x, y = LogicalSymbol.([:x, :y])
+deny_universal =     ¬Ā(x, y) => ¬y
+assert_existential =  Ē(x, y) =>  y
+assert_universal =    Ā(x, y) =>  y
+deny_existential =   ¬Ē(x, y) => ¬y
 
 
-tableau(proposition::SB; kw...) = tableau([proposition]; kw...)
+tableau(proposition::AbstractExpression; kw...) = tableau([proposition]; kw...)
 tableau(propositions...; kw...) = tableau([propositions...]; kw...)
 function tableau(propositions::Union{Set, Vector}; skolem_vars=[], proof::Vector{ProofLine}=ProofLine[])
     if length(proof) == 0
@@ -174,7 +184,7 @@ function tableau(propositions::Union{Set, Vector}; skolem_vars=[], proof::Vector
             push!(proof, ProofLine(length(proof) + 1, Symbolics.value(proposition), "Assumption"))
         end
     end
-    simplified_propositions = Set(simplify.(propositions; rewriter=simplify_statement))
+    simplified_propositions = AbstractExpression[repeated_chain_simplify(p, tableau_replacement_rules) for p ∈ propositions]
 
     for proposition ∈ simplified_propositions
         if isnothing(find_proof_line_by_statement(proof, proposition))
@@ -185,7 +195,7 @@ function tableau(propositions::Union{Set, Vector}; skolem_vars=[], proof::Vector
     return _tableau_simplified(simplified_propositions; skolem_vars=skolem_vars, proof=proof)
 end
 
-function _tableau_simplified(propositions::Set; skolem_vars=[], proof::Vector{ProofLine}=ProofLine[])
+function _tableau_simplified(propositions::Vector{AbstractExpression}; skolem_vars=[], proof::Vector{ProofLine}=ProofLine[])
     # compile list of all free variables in all propositions
     free_vars = collect(Iterators.flatten([Symbolics.get_variables(p) for p ∈ propositions]))
     free_vars = filter([istree(v) ? first(arguments(v)) : v for v ∈ free_vars]) do v
@@ -214,7 +224,7 @@ function _tableau_simplified(propositions::Set; skolem_vars=[], proof::Vector{Pr
     for p ∈ propositions
         pv = Symbolics.value(p)
 
-        if !istree(pv) || pv.metadata == :predicate
+        if !istree(pv) || metadata(pv) == :predicate
             # check for contradiction
             contradiction_index = findfirst([isequal(¬p, q) for q ∈ ordered_propositions])
             if !isnothing(contradiction_index)
@@ -307,7 +317,7 @@ function _tableau_simplified(propositions::Set; skolem_vars=[], proof::Vector{Pr
 end
 
 
-prove(proposition::SB; kw...) = prove([proposition]; kw...)
+prove(proposition::AbstractExpression; kw...) = prove([proposition]; kw...)
 prove(propositions...; kw...) = prove([propositions...]; kw...)
 function prove(propositions::Union{Set, Vector})
     proof = ProofLine[]
@@ -318,8 +328,5 @@ end
 
 
 _dict_from_combination_index(variables, index::Int) = Dict([variables[i] => Bool(index >> (i-1) & 1) for i ∈ 1:length(variables)])
-
-
-include("./expression.jl")
 
 end # module

@@ -11,8 +11,8 @@
     # b ∨ a  (b or a)
     st = b ∨ a
     or_tt = truthtable(st)
-    @test all(or_tt[!, :b] .== [false, true, false, true])
-    @test all(or_tt[!, :a] .== [false, false, true, true])
+    @test all(or_tt[!, :b] .== [false, false, true, true])
+    @test all(or_tt[!, :a] .== [false, true, false, true])
     @test all(or_tt[!, string(st)] .== [false, true, true, true])
 
     # material implication

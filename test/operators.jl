@@ -12,20 +12,12 @@ end
     @test ¬(true) == false
     @test ¬(false) == true
 
-    exported_operators = [:¬, :→, :⟶, :⟹, :←, :⟵, :↔, :⟷, :⇔, :∨, :∧]
+    exported_operators = [:¬, :→, :⟷, :∨, :∧]
     @test all(isdefined.(repeat([Deductive], length(exported_operators)), exported_operators))
 
     @test_binary_operator ∨ (false, true, true, true)
     @test_binary_operator ∧ (false, false, false, true)
 
     @test_binary_operator → (true, false, true, true)
-    @test_binary_operator ⟶ (true, false, true, true)
-    @test_binary_operator ⟹ (true, false, true, true)
-
-    @test_binary_operator ← (true, true, false, true)
-    @test_binary_operator ⟵ (true, true, false, true)
-
-    @test_binary_operator ↔ (true, false, false, true)
     @test_binary_operator ⟷ (true, false, false, true)
-    @test_binary_operator ⇔ (true, false, false, true)
 end

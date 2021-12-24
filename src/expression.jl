@@ -1,42 +1,57 @@
-module Expression
-
-export ¬, ∧, ∨, →, ⟷, LogicalSymbol
+export ¬, ∧, ∨, →, ⟷, LogicalSymbol, istree, isnode, metadata, variables
 
 
 abstract type AbstractExpression end
 
 struct LogicalSymbol <: AbstractExpression
     name::Symbol
+    metadata::Any
 end
+LogicalSymbol(name::Symbol) = LogicalSymbol(name, nothing)
 istree(::LogicalSymbol) = false
 isnode(::LogicalSymbol) = true
+metadata(sym::LogicalSymbol) = sym.metadata
+variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
+Base.isequal(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name
+Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, sym2.name)
 
 
 struct LogicalOperation
+    bool_fn::Function
     name::Symbol
     argument_count::Int
 end
 isunary(op::LogicalOperation) = op.argument_count == 1
 isbinary(op::LogicalOperation) = op.argument_count == 2
 Base.show(io::IO, op::LogicalOperation) = print(io, string(op.name))
+Base.isequal(op1::LogicalOperation, op2::LogicalOperation) = op1.name == op2.name && op1.argument_count == op2.argument_count
 
-
-function (op::LogicalOperation)(args...)
+function (op::LogicalOperation)(args::AbstractExpression...)
     if length(args) != op.argument_count
         throw(ErrorException("Invalid argument count $(length(args)). Expected $(op.argument_count) arguments."))
     end
-    return LogicalExpression([args...], op)
+    return LogicalExpression(AbstractExpression[args...], op)
 end
+(op::LogicalOperation)(args::Bool...) = op.bool_fn(args...)
+(op::LogicalOperation)(args::BitVector) = op.bool_fn(args...)
 
 struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
+    variables::Set{LogicalSymbol}  # this set is the reason we make expressions immutable
+
+    function LogicalExpression(arguments::Vector{AbstractExpression}, operation::LogicalOperation)
+        new(arguments, operation, reduce(∪, variables.(arguments)))
+    end
 end
 istree(::LogicalExpression) = true
-isnode(::LogicalSymbol) = false
+isnode(::LogicalExpression) = false
 operation(expr::LogicalExpression) = expr.operation
 arguments(expr::LogicalExpression) = expr.arguments
+metadata(::LogicalExpression) = nothing
+variables(expr::LogicalExpression) = expr.variables
+Base.isequal(expr1::LogicalExpression, expr2::LogicalExpression) = isequal(operation(expr1), operation(expr2)) && all(isequal.(arguments(expr1), arguments(expr2)))
 
 function Base.show(io::IO, expr::LogicalExpression)
     showparens(expr) = (expr isa LogicalExpression) && !isunary(expr.operation)
@@ -78,16 +93,13 @@ end
 
 
 # unary operator
-const ¬ = LogicalOperation(:¬, 1)
+const ¬ = LogicalOperation(x -> !x, :¬, 1)
 
 # binary operators
-const ∧ = LogicalOperation(:∧, 2)
-const ∨ = LogicalOperation(:∨, 2)
-const → = LogicalOperation(:→, 2)
-const ⟷ = LogicalOperation(:⟷, 2)
+const ∧ = LogicalOperation((x, y) -> x && y, :∧, 2)
+const ∨ = LogicalOperation((x, y) -> x || y, :∨, 2)
+const → = LogicalOperation((x, y) -> (¬x ∨ y), :→, 2)
+const ⟷ = LogicalOperation((x, y) -> (x ∧ y) ∨ (¬x ∧ ¬y), :⟷, 2)
 
 
 include("./replacement.jl")
-
-
-end # module
