@@ -1,14 +1,19 @@
 # Deductive.jl
+
 Simple package for expressing and proving [zeroth order](https://en.wikipedia.org/wiki/Propositional_calculus) and [first order](https://en.wikipedia.org/wiki/First-order_logic) logical statements and theorems symbolically in Julia
 
 ## Installation
+
 Currently this package is unregistered in Julia's general registry. Instead install through this repository directly.
+
 ```julia-repl
 (@v1.7) pkg> add https://github.com/ctrekker/PropositionalLogic.jl
 ```
 
 ## Getting Started
+
 ### Propositional Logic (zeroth order)
+
 ```julia
 using Deductive
 a, b = LogicalSymbol.([:a, :b])
@@ -39,6 +44,7 @@ Several operators are exported and their use is required in defining statements.
 | ⟷      | \leftrightarrow     | [Material Equivalence](https://en.wikipedia.org/wiki/If_and_only_if)       |
 
 ### **OUTDATED** Predicate Logic (first order)
+
 With predicates, statements like "for all x, P(x) is true" can be written. Due to some Julia parser issues, defining a function with the symbols for universal (∀) and existential (∃) quantification isn't possible. Instead we settle for the symbols Ā (typed A\bar) and Ē (typed (E\bar)). Here's an example of their use:
 
 ```julia
@@ -66,6 +72,7 @@ tableau(¬my_statement)  # returns false, since the contradiction of a tautology
 ```
 
 ### Generating Human-Readable Proofs (WIP)
+
 The method of analytic tableaux is a complete method for proving zeroth and first order logic problems. To export these proofs in human-readable form the `prove` function is exported. Instead of simply yielding a `true` or `false`, this function will return a full proof containing the steps taken to determine whether a set of propositions are consistent.
 
 ```julia
