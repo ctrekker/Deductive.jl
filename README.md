@@ -38,7 +38,7 @@ Several operators are exported and their use is required in defining statements.
 | →      | \rightarrow         | [Material Implication](https://en.wikipedia.org/wiki/Material_conditional) |
 | ⟷      | \leftrightarrow     | [Material Equivalence](https://en.wikipedia.org/wiki/If_and_only_if)       |
 
-### Predicate Logic (first order)
+### **OUTDATED** Predicate Logic (first order)
 With predicates, statements like "for all x, P(x) is true" can be written. Due to some Julia parser issues, defining a function with the symbols for universal (∀) and existential (∃) quantification isn't possible. Instead we settle for the symbols Ā (typed A\bar) and Ē (typed (E\bar)). Here's an example of their use:
 
 ```julia
