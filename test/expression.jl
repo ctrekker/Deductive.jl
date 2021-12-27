@@ -139,5 +139,11 @@ end
         @test variables(¬(a ∨ b)) == Set([a, b])
         @test variables(¬(a ∨ b) → a) == Set([a, b])
         @test variables(¬(a ∨ b) → c) == Set([a, b, c])
+
+        # left and right on binary operators
+        @test left(a ∧ b) == a
+        @test right(a ∧ b) == b
+        @test left((a ∧ b) ∨ (b ∧ c)) == (a ∧ b)
+        @test right((a ∧ b) ∨ (b ∧ c)) == (b ∧ c)
     end
 end

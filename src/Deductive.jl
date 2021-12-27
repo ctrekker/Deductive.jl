@@ -9,6 +9,8 @@ export Ē, Ā
 
 
 include("./expression.jl")
+include("./manipulation.jl")
+include("./search.jl")
 
 
 # function FreeVariable(sym::Symbol, metadata::Symbol)

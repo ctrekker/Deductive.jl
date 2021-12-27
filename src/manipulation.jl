@@ -64,3 +64,73 @@ end
 
 evaluate(sym::LogicalSymbol, values::Dict{LogicalSymbol, Bool}) = values[sym]
 evaluate(expr::LogicalExpression, values::Dict{LogicalSymbol, Bool}) = operation(expr)(evaluate.(arguments(expr), Iterators.repeat([values], length(arguments(expr)))))
+
+
+
+# Association
+"""
+    recursive_handedness(expr::AbstractExpression, compare_symbol::LogicalSymbol, base_symbol::LogicalSymbol)
+
+Returns the handedness (left or right for binary operators) of the comparison symbol relative to the base symbol in a given expression.
+A symbol can also be "ambidextrous" if an instance of it can be found on both the left and the right.
+"""
+function recursive_handedness(expr::AbstractExpression, compare_symbol::LogicalSymbol, base_symbol::LogicalSymbol)
+    both_symbols_set = Set([compare_symbol, base_symbol])
+    left_variables = variables(left(expr))
+    right_variables = variables(right(expr))
+
+    left_side = if both_symbols_set ⊆ left_variables
+        recursive_handedness(left(expr), compare_symbol, base_symbol)
+    end
+    right_side = if both_symbols_set ⊆ right_variables
+        recursive_handedness(right(expr), compare_symbol, base_symbol)
+    end
+
+    if !isnothing(left_side) && !isnothing(right_side)
+        return :ambidextrous
+    end
+    if !isnothing(left_side)
+        return left_side
+    end
+    if !isnothing(right_side)
+        return right_side
+    end
+
+    if compare_symbol ∈ left_variables && compare_symbol ∈ right_variables
+        return :ambidextrous
+    end
+    if compare_symbol ∈ left_variables
+        return :left
+    end
+    if compare_symbol ∈ right_variables
+        return :right
+    end
+end
+
+_isleft(x) = x == 1
+_isright(x) = x == 2
+_opposite_direction(x) = _isleft(x) ? 2 : 1
+function associative_step(expr::AbstractExpression, leaf::AbstractExpression, direction)
+    leaf_path = locate_expression(expr, leaf)
+
+    descension_expr = nothing
+    for i ∈ (length(leaf_path)):-1:1
+        if leaf_path[i] != direction
+            subpath = leaf_path[1:(i-1)]
+            descension_expr = select_by_path(expr, subpath)
+            break
+        end
+    end
+
+    if isnothing(descension_expr)
+        return expr
+    end
+
+    downwards_direction = _opposite_direction(direction)
+    current_node = arguments(descension_expr)[direction]
+    while istree(current_node)
+        current_node = arguments(current_node)[downwards_direction]
+    end
+    
+    @info current_node
+end

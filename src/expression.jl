@@ -1,5 +1,5 @@
 export ¬, ∧, ∨, →, ⟷
-export LogicalSymbol, istree, isnode, metadata, variables, operation, arguments
+export LogicalSymbol, istree, isnode, metadata, variables, operation, arguments, left, right
 export isunary, isbinary
 
 
@@ -15,7 +15,7 @@ isnode(::LogicalSymbol) = true
 metadata(sym::LogicalSymbol) = sym.metadata
 variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
-Base.isequal(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
+Base.:(==)(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
 Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, sym2.name)
 
 
@@ -27,7 +27,7 @@ end
 isunary(op::LogicalOperation) = op.argument_count == 1
 isbinary(op::LogicalOperation) = op.argument_count == 2
 Base.show(io::IO, op::LogicalOperation) = print(io, string(op.name))
-Base.isequal(op1::LogicalOperation, op2::LogicalOperation) = op1.name == op2.name && op1.argument_count == op2.argument_count
+Base.:(==)(op1::LogicalOperation, op2::LogicalOperation) = op1.name == op2.name && op1.argument_count == op2.argument_count
 
 function (op::LogicalOperation)(args::AbstractExpression...)
     if length(args) != op.argument_count
@@ -53,7 +53,10 @@ operation(expr::LogicalExpression) = expr.operation
 arguments(expr::LogicalExpression) = expr.arguments
 metadata(::LogicalExpression) = nothing
 variables(expr::LogicalExpression) = expr.variables
-Base.isequal(expr1::LogicalExpression, expr2::LogicalExpression) = isequal(operation(expr1), operation(expr2)) && all(isequal.(arguments(expr1), arguments(expr2)))
+left(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[1] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
+right(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[2] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
+Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = isequal(operation(expr1), operation(expr2)) && all(isequal.(arguments(expr1), arguments(expr2)))
+
 
 function Base.show(io::IO, expr::LogicalExpression)
     showparens(expr) = (expr isa LogicalExpression) && !isunary(expr.operation)
@@ -102,6 +105,3 @@ const ∧ = LogicalOperation((x, y) -> x && y, :∧, 2)
 const ∨ = LogicalOperation((x, y) -> x || y, :∨, 2)
 const → = LogicalOperation((x, y) -> (¬x ∨ y), :→, 2)
 const ⟷ = LogicalOperation((x, y) -> (x ∧ y) ∨ (¬x ∧ ¬y), :⟷, 2)
-
-
-include("./manipulation.jl")
