@@ -51,8 +51,8 @@ FreeVariableType = LogicalSymbol
 
 # quantifiers
 # todo: fix quantifier logic
-Ē = LogicalOperation((n, m) -> nothing, :Ē, 2)
-Ā = LogicalOperation((n, m) -> nothing, :Ā, 2)
+Ē = LogicalOperation((n, m) -> nothing, :Ē, 2, false, false)
+Ā = LogicalOperation((n, m) -> nothing, :Ā, 2, false, false)
 # function Ē(x::FreeVariableType, st::AbstractExpression)
 #     quantified_var = Sym{Any, Symbol}(Symbolics.tosymbol(x), :quantified)
 #     AbstractExpression(Ē, [quantified_var, replace(st, x => quantified_var)])

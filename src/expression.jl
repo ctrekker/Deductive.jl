@@ -1,5 +1,5 @@
 export ¬, ∧, ∨, →, ⟷
-export LogicalSymbol, istree, isnode, metadata, variables, operation, arguments, left, right
+export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, left, right, isassociative, iscommutative
 export isunary, isbinary
 
 
@@ -14,6 +14,7 @@ istree(::LogicalSymbol) = false
 isnode(::LogicalSymbol) = true
 metadata(sym::LogicalSymbol) = sym.metadata
 variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
+operations(::LogicalSymbol) = Set{LogicalOperation}([])
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
 Base.:(==)(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
 Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, sym2.name)
@@ -23,11 +24,17 @@ struct LogicalOperation
     bool_fn::Function
     name::Symbol
     argument_count::Int
+    associative::Bool
+    commutative::Bool
 end
 isunary(op::LogicalOperation) = op.argument_count == 1
 isbinary(op::LogicalOperation) = op.argument_count == 2
+isassociative(op::LogicalOperation) = op.associative
+iscommutative(op::LogicalOperation) = op.commutative
 Base.show(io::IO, op::LogicalOperation) = print(io, string(op.name))
-Base.:(==)(op1::LogicalOperation, op2::LogicalOperation) = op1.name == op2.name && op1.argument_count == op2.argument_count
+function Base.:(==)(op1::LogicalOperation, op2::LogicalOperation)
+    op1.name == op2.name && op1.argument_count == op2.argument_count && isassociative(op1) == isassociative(op2) && iscommutative(op1) == iscommutative(op2)
+end
 
 function (op::LogicalOperation)(args::AbstractExpression...)
     if length(args) != op.argument_count
@@ -38,13 +45,15 @@ end
 (op::LogicalOperation)(args::Bool...) = op.bool_fn(args...)
 (op::LogicalOperation)(args::BitVector) = op.bool_fn(args...)
 
-mutable struct LogicalExpression <: AbstractExpression
+struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
-    variables::Set{LogicalSymbol}  # this set is the reason we make expressions immutable
+    # these sets are the reason we make expressions immutable
+    variables::Set{LogicalSymbol}
+    operations::Set{LogicalOperation}
 
     function LogicalExpression(arguments::Vector{AbstractExpression}, operation::LogicalOperation)
-        new(arguments, operation, reduce(∪, variables.(arguments)))
+        new(arguments, operation, reduce(∪, variables.(arguments)), reduce(∪, operations.(arguments)) ∪ Set([operation]))
     end
 end
 istree(::LogicalExpression) = true
@@ -53,8 +62,11 @@ operation(expr::LogicalExpression) = expr.operation
 arguments(expr::LogicalExpression) = expr.arguments
 metadata(::LogicalExpression) = nothing
 variables(expr::LogicalExpression) = expr.variables
+operations(expr::LogicalExpression) = expr.operations
 left(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[1] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 right(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[2] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
+isassociative(expr::LogicalExpression) = length(operations(expr)) == 1 && isassociative(operation(expr))
+iscommutative(expr::LogicalExpression) = length(operations(expr)) == 1 && iscommutative(operation(expr))
 Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = isequal(operation(expr1), operation(expr2)) && all(isequal.(arguments(expr1), arguments(expr2)))
 function set_argument(expr::LogicalExpression, index::Int, new_argument::AbstractExpression)
     expr.arguments[index] = new_argument
@@ -102,11 +114,23 @@ function Base.show(io::IO, expr::LogicalExpression)
 end
 
 
+# ASSOCIATION
+associative_ordering(sym::LogicalSymbol) = [sym]
+associative_ordering(expr::LogicalExpression) = reduce(vcat, associative_ordering.(arguments(expr)))
+
+isequal_associative(sym1::LogicalSymbol, sym2::LogicalSymbol) = isequal(sym1, sym2)
+function isequal_associative(expr1::LogicalExpression, expr2::LogicalExpression)
+    length(operations(expr1)) == 1 && operations(expr1) == operations(expr2) && associative_ordering(expr1) == associative_ordering(expr2)
+end
+isequal_associative(::AbstractExpression, ::AbstractExpression) = false
+
+
+# OPERATORS
 # unary operator
-const ¬ = LogicalOperation(x -> !x, :¬, 1)
+const ¬ = LogicalOperation(x -> !x, :¬, 1, false, false)
 
 # binary operators
-const ∧ = LogicalOperation((x, y) -> x && y, :∧, 2)
-const ∨ = LogicalOperation((x, y) -> x || y, :∨, 2)
-const → = LogicalOperation((x, y) -> (¬x ∨ y), :→, 2)
-const ⟷ = LogicalOperation((x, y) -> (x ∧ y) ∨ (¬x ∧ ¬y), :⟷, 2)
+const ∧ = LogicalOperation((x, y) -> x && y, :∧, 2, true, true)
+const ∨ = LogicalOperation((x, y) -> x || y, :∨, 2, true, true)
+const → = LogicalOperation((x, y) -> (¬x ∨ y), :→, 2, false, false)
+const ⟷ = LogicalOperation((x, y) -> (x ∧ y) ∨ (¬x ∧ ¬y), :⟷, 2, true, true)
