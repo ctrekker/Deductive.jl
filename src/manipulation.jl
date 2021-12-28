@@ -111,6 +111,10 @@ _isleft(x) = x == 1
 _isright(x) = x == 2
 _opposite_direction(x) = _isleft(x) ? 2 : 1
 function associative_step(expr::AbstractExpression, leaf::AbstractExpression, direction)
+    expr_copy = deepcopy(expr)
+    associative_step!(expr_copy, leaf, direction)
+end
+function associative_step!(expr::AbstractExpression, leaf::AbstractExpression, direction)
     leaf_path = locate_expression(expr, leaf)
 
     descension_expr = nothing
@@ -127,10 +131,26 @@ function associative_step(expr::AbstractExpression, leaf::AbstractExpression, di
     end
 
     downwards_direction = _opposite_direction(direction)
+    parent_node = descension_expr
     current_node = arguments(descension_expr)[direction]
     while istree(current_node)
+        parent_node = current_node
         current_node = arguments(current_node)[downwards_direction]
     end
-    
-    @info current_node
+
+    associated_expr = LogicalExpression(_isleft(direction) ? AbstractExpression[current_node, leaf] : AbstractExpression[leaf, current_node], operation(expr))
+
+    other_expr = select_by_path(expr, [leaf_path[1:end-1]..., _opposite_direction(leaf_path[end])])
+    if !isequal(current_node, other_expr)
+        
+        t = select_by_path(expr, leaf_path[1:end-2])
+        set_argument(parent_node, downwards_direction, associated_expr)
+        if length(leaf_path[1:end-2]) == 0
+            return arguments(expr)[direction]
+        end
+        set_argument(t, downwards_direction, other_expr)
+    end
+    @info expr
+
+    expr
 end

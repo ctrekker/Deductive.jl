@@ -38,7 +38,7 @@ end
 (op::LogicalOperation)(args::Bool...) = op.bool_fn(args...)
 (op::LogicalOperation)(args::BitVector) = op.bool_fn(args...)
 
-struct LogicalExpression <: AbstractExpression
+mutable struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
     variables::Set{LogicalSymbol}  # this set is the reason we make expressions immutable
@@ -56,6 +56,11 @@ variables(expr::LogicalExpression) = expr.variables
 left(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[1] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 right(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[2] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = isequal(operation(expr1), operation(expr2)) && all(isequal.(arguments(expr1), arguments(expr2)))
+function set_argument(expr::LogicalExpression, index::Int, new_argument::AbstractExpression)
+    expr.arguments[index] = new_argument
+    expr.variables = reduce(∪, variables.(arguments(expr)))
+    expr
+end
 
 
 function Base.show(io::IO, expr::LogicalExpression)
