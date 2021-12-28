@@ -18,6 +18,18 @@ function Base.replace(expr::AbstractExpression, rule::Pair{T, U}) where {T <: Ab
     reconstruct_replacement(rule.second, replacements)
 end
 
+function recursivereplace(expr::AbstractExpression, rule::Pair{T, U}) where {T <: AbstractExpression, U <: AbstractExpression}
+    replaced_expr = replace(expr, rule)
+    if replaced_expr == expr && istree(replaced_expr)
+        new_args = Vector{AbstractExpression}(recursivereplace.(arguments(expr), Iterators.repeat([rule], length(arguments(expr)))))
+        if any(new_args .!= arguments(expr))
+            return LogicalExpression(new_args, operation(expr))
+        end
+    end
+
+    return replaced_expr
+end
+
 matches(expr::AbstractExpression, pattern::AbstractExpression) = find_matches!(expr, pattern, Dict{LogicalSymbol, AbstractExpression}())
 
 function find_matches(expr::AbstractExpression, pattern::AbstractExpression)
