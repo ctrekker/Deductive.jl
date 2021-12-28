@@ -124,6 +124,29 @@ function isequal_associative(expr1::LogicalExpression, expr2::LogicalExpression)
 end
 isequal_associative(::AbstractExpression, ::AbstractExpression) = false
 
+_associative_tree_count_cache = Dict()
+function associative_tree_count(nodes::Int)
+    if nodes == 0
+        return 1
+    end
+    if nodes == 1
+        return 1
+    end
+
+    if haskey(_associative_tree_count_cache, nodes)
+        return _associative_tree_count_cache[nodes]
+    end
+
+    agg = 0
+    for i ∈ 0:(nodes - 1)
+        agg += associative_tree_count(nodes - i - 1) * associative_tree_count(i)
+    end
+
+    _associative_tree_count_cache[nodes] = agg
+
+    agg
+end
+
 
 # OPERATORS
 # unary operator

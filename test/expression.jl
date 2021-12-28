@@ -226,5 +226,15 @@ end
             @test !isequal_associative(a ∧ b, a ∨ b)
             @test !isequal_associative(a ∧ ¬b, a ∧ ¬b)
         end
+
+        @testset "Associative Tree Count" begin
+            @test Deductive.associative_tree_count(0) == 1
+            @test Deductive.associative_tree_count(1) == 1
+            @test Deductive.associative_tree_count(2) == 2
+            @test Deductive.associative_tree_count(3) == 5
+            @test Deductive.associative_tree_count(4) == 14
+            @test Deductive.associative_tree_count(5) == 42
+            @test Deductive.associative_tree_count(6) == 132
+        end
     end
 end
