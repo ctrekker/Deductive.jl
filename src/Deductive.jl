@@ -1,7 +1,5 @@
 module Deductive
 
-using Symbolics
-using Symbolics: Sym, Symbolic, Term
 using DataFrames, PrettyTables
 
 export Predicate, truthtable, tableau, prove
@@ -207,22 +205,22 @@ function _tableau_simplified(propositions::Vector{AbstractExpression}; skolem_va
     end
 
     # when a quantifier is simplified we find existing skolem variables and substitute them in for universal free variables
-    function populate_skolems(term::Term, unary_operator=identity)
-        placeholder_assertion = unary_operator(substitute_quantified(term, _f))
-        realized_assertions = [unary_operator(substitute_quantified(term, var)) for var ∈ Iterators.flatten([skolem_vars, free_vars])]
+    # function populate_skolems(term::Term, unary_operator=identity)
+    #     placeholder_assertion = unary_operator(substitute_quantified(term, _f))
+    #     realized_assertions = [unary_operator(substitute_quantified(term, var)) for var ∈ Iterators.flatten([skolem_vars, free_vars])]
 
-        Set([placeholder_assertion, realized_assertions...])
-    end
+    #     Set([placeholder_assertion, realized_assertions...])
+    # end
 
     # when a quantifier is simplified a new skolem variable can be created in some cases
     # this function creates a new skolem variable and substitutes it into all free variable predicates
-    function create_skolem(term::Term, reduced_propositions, unary_operator=identity)
-        new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
-        new_assertion = unary_operator(substitute_quantified(term, new_skolem_var))
-        realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
+    # function create_skolem(term::Term, reduced_propositions, unary_operator=identity)
+    #     new_skolem_var = FreeVariable(Symbol("c" * string(length(skolem_vars) + 1)), :skolem)
+    #     new_assertion = unary_operator(substitute_quantified(term, new_skolem_var))
+    #     realized_placeholders = [substitute(st, _f => new_skolem_var) for st ∈ reduced_propositions]
 
-        new_skolem_var, Set([realized_placeholders..., new_assertion])
-    end
+    #     new_skolem_var, Set([realized_placeholders..., new_assertion])
+    # end
 
     ordered_propositions = [propositions...]
     for p ∈ propositions
