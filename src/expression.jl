@@ -15,7 +15,9 @@ isnode(::LogicalSymbol) = true
 metadata(sym::LogicalSymbol) = sym.metadata
 variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
 operations(::LogicalSymbol) = Set{LogicalOperation}([])
+arguments(::LogicalSymbol) = AbstractExpression[]
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
+Base.hash(sym::LogicalSymbol, h::UInt) = hash(sym.name, hash(sym.metadata, h))
 Base.:(==)(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
 Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, sym2.name)
 
@@ -32,6 +34,7 @@ isbinary(op::LogicalOperation) = op.argument_count == 2
 isassociative(op::LogicalOperation) = op.associative
 iscommutative(op::LogicalOperation) = op.commutative
 Base.show(io::IO, op::LogicalOperation) = print(io, string(op.name))
+Base.hash(op::LogicalOperation, h::UInt) = hash(op.name, hash(op.argument_count, hash(op.associative, hash(op.commutative, h))))
 function Base.:(==)(op1::LogicalOperation, op2::LogicalOperation)
     op1.name == op2.name && op1.argument_count == op2.argument_count && isassociative(op1) == isassociative(op2) && iscommutative(op1) == iscommutative(op2)
 end
@@ -67,7 +70,8 @@ left(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[1] :
 right(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[2] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 isassociative(expr::LogicalExpression) = length(operations(expr)) == 1 && isassociative(operation(expr))
 iscommutative(expr::LogicalExpression) = length(operations(expr)) == 1 && iscommutative(operation(expr))
-Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = isequal(operation(expr1), operation(expr2)) && all(isequal.(arguments(expr1), arguments(expr2)))
+Base.hash(expr::LogicalExpression, h::UInt) = hash(expr.arguments, hash(expr.operation, h))
+Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = operation(expr1) == operation(expr2) && all(arguments(expr1) .== arguments(expr2))
 function set_argument(expr::LogicalExpression, index::Int, new_argument::AbstractExpression)
     expr.arguments[index] = new_argument
     expr.variables = reduce(∪, variables.(arguments(expr)))

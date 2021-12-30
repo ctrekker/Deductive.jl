@@ -1,4 +1,4 @@
-export matches, replace, find_matches, find_matches!, evaluate, associative_ordering, isequal_associative
+export matches, recursivematches, replace, find_matches, find_matches!, evaluate, associative_ordering, isequal_associative
 
 function reconstruct_replacement(replacement_expr::AbstractExpression, replacements::Dict{LogicalSymbol, AbstractExpression})
     if istree(replacement_expr)
@@ -10,8 +10,8 @@ function reconstruct_replacement(replacement_expr::AbstractExpression, replaceme
 end
 
 function Base.replace(expr::AbstractExpression, rule::Pair{T, U}) where {T <: AbstractExpression, U <: AbstractExpression}
-    replacements = find_matches(expr, rule.first)
-    if length(keys(replacements)) == 0
+    replacements = Dict{LogicalSymbol, AbstractExpression}()
+    if !find_matches!(expr, rule.first, replacements)
         return expr
     end
 
@@ -53,6 +53,18 @@ function find_matches!(expr::AbstractExpression, pattern::AbstractExpression, ma
         matches[pattern] = expr
     end
     true
+end
+
+function recursivematches(expr::AbstractExpression, pattern::AbstractExpression)
+    if matches(expr, pattern)
+        return true
+    end
+    return any(recursivematches.(arguments(expr), flat_repeat(pattern, length(arguments(expr)))))
+end
+
+substitute(sym::LogicalSymbol, symbol_values::Dict{LogicalSymbol, AbstractExpression}) = haskey(symbol_values, sym) ? symbol_values[sym] : sym
+function substitute(expr::LogicalExpression, symbol_values::Dict{LogicalSymbol, AbstractExpression})
+    return LogicalExpression(Vector{AbstractExpression}(substitute.(arguments(expr), flat_repeat(symbol_values, length(arguments(expr))))), operation(expr))
 end
 
 

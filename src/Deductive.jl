@@ -8,6 +8,7 @@ export Predicate, truthtable, tableau, prove
 export Ē, Ā
 
 
+include("./utils.jl")
 include("./expression.jl")
 include("./manipulation.jl")
 include("./search.jl")
