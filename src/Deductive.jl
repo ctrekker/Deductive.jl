@@ -184,14 +184,14 @@ tableau(propositions...; kw...) = tableau([propositions...]; kw...)
 function tableau(propositions::Union{Set, Vector}; skolem_vars=[], proof::Vector{ProofLine}=ProofLine[])
     if length(proof) == 0
         for proposition ∈ propositions
-            push!(proof, ProofLine(length(proof) + 1, Symbolics.value(proposition), "Assumption"))
+            push!(proof, ProofLine(length(proof) + 1, proposition, "Assumption"))
         end
     end
     simplified_propositions = AbstractExpression[repeated_chain_simplify(p, tableau_replacement_rules) for p ∈ propositions]
 
     for proposition ∈ simplified_propositions
         if isnothing(find_proof_line_by_statement(proof, proposition))
-            push!(proof, ProofLine(length(proof) + 1, Symbolics.value(proposition), "Replacement Rule <TODO>"))
+            push!(proof, ProofLine(length(proof) + 1, proposition, "Replacement Rule <TODO>"))
         end
     end
 
@@ -200,7 +200,7 @@ end
 
 function _tableau_simplified(propositions::Vector{AbstractExpression}; skolem_vars=[], proof::Vector{ProofLine}=ProofLine[])
     # compile list of all free variables in all propositions
-    free_vars = collect(Iterators.flatten([Symbolics.get_variables(p) for p ∈ propositions]))
+    free_vars = collect(Iterators.flatten([variables(p) for p ∈ propositions]))
     free_vars = filter([istree(v) ? first(arguments(v)) : v for v ∈ free_vars]) do v
         v.metadata == :free
     end
@@ -225,7 +225,7 @@ function _tableau_simplified(propositions::Vector{AbstractExpression}; skolem_va
 
     ordered_propositions = [propositions...]
     for p ∈ propositions
-        pv = Symbolics.value(p)
+        pv = p
 
         if !istree(pv) || metadata(pv) == :predicate
             # check for contradiction
