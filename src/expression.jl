@@ -1,5 +1,5 @@
 export ¬, ∧, ∨, →, ⟷
-export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, left, right, isassociative, iscommutative
+export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, left, right, isassociative, iscommutative, @symbols
 export isunary, isbinary
 
 
@@ -20,6 +20,17 @@ Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
 Base.hash(sym::LogicalSymbol, h::UInt) = hash(sym.name, hash(sym.metadata, h))
 Base.:(==)(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
 Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, sym2.name)
+
+
+macro symbols(syms...)
+    definitions = [:(
+        $(esc(sym)) = LogicalSymbol($(esc(Symbol))($(string(sym))))
+    ) for sym ∈ syms]
+    quote
+        $(definitions...)
+        nothing
+    end
+end
 
 
 struct LogicalOperation
