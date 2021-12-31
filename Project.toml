@@ -1,7 +1,7 @@
 name = "Deductive"
 uuid = "1a5e8c1d-b073-459e-b18e-ab421a81424e"
 authors = ["Connor Burns <cburns@cot.llc>"]
-version = "0.0.3"
+version = "0.0.4"
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
