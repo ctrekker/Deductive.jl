@@ -16,7 +16,8 @@ Currently this package is unregistered in Julia's general registry. Instead inst
 
 ```julia
 using Deductive
-a, b = LogicalSymbol.([:a, :b])
+
+@symbols a b
 
 tableau(a ∧ b)      # true
 tableau(a ∧ b, ¬a)  # false, because contradiction
@@ -78,7 +79,7 @@ The method of analytic tableaux is a complete method for proving zeroth and firs
 ```julia
 using Deductive
 
-a, b, c, d = LogicalSymbol.([:a, :b, :c, :d])
+@symbols a b c d
 
 # basic example from above
 prove(a ∧ b, ¬a)
