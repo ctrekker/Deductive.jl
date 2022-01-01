@@ -1,5 +1,5 @@
 export ¬, ∧, ∨, →, ⟷
-export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, left, right, isassociative, iscommutative, @symbols
+export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, left, right, isassociative, iscommutative, @symbols, @unique_symbols
 export isunary, isbinary
 
 
@@ -26,6 +26,24 @@ macro symbols(syms...)
     definitions = [:(
         $(esc(sym)) = LogicalSymbol($(esc(Symbol))($(string(sym))))
     ) for sym ∈ syms]
+    quote
+        $(definitions...)
+        nothing
+    end
+end
+
+
+_unique_index = 1
+macro unique_symbols(syms...)
+    global _unique_index
+
+    unique_names = [Symbol("u" * subscript_number(_unique_index + i)) for i ∈ 0:(length(syms) - 1)]
+    definitions = [:(
+        $(esc(sym)) = LogicalSymbol($(esc(Symbol))($(string(unique_name))))
+    ) for (sym, unique_name) ∈ zip(syms, unique_names)]
+
+    _unique_index += length(syms)
+
     quote
         $(definitions...)
         nothing

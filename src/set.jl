@@ -1,4 +1,4 @@
-export ExtensionalSet, IntensionalSet, settuple, cardinality, ∅
+export ExtensionalSet, IntensionalSet, settuple, orderedpair, cardinality, ∅, 𝔻
 
 
 abstract type MathematicalSet <: AbstractExpression end
@@ -12,7 +12,14 @@ ExtensionalSet(elements::Tuple{Vararg{T}}) where {T} = ExtensionalSet(Set{T}([el
 elements(es::ExtensionalSet) = es.elements
 Base.length(es::ExtensionalSet) = length(elements(es))
 Base.isempty(es::ExtensionalSet) = Base.isempty(elements(es))
+Base.hash(es::ExtensionalSet, h::UInt) = hash(elements(es), h)
+Base.:(==)(es1::ExtensionalSet, es2::ExtensionalSet) = elements(es1) == elements(es2)
 cardinality(es::ExtensionalSet) = length(es)
+
+# expression methods
+variables(::ExtensionalSet) = Set{LogicalSymbol}()
+operations(::ExtensionalSet) = Set{LogicalOperation}()
+
 function Base.show(io::IO, es::ExtensionalSet)
     if isempty(es)
         print(io, "∅")
@@ -30,6 +37,8 @@ function Base.show(io::IO, es::ExtensionalSet)
     end
     print(io, "}")
 end
+
+orderedpair(a, b) = ExtensionalSet([ExtensionalSet([a]), ExtensionalSet([a, b])])
 function settuple(a...)
     a = [a...]
     if length(a) == 0
@@ -41,8 +50,30 @@ end
 
 
 struct IntensionalSet <: MathematicalSet
-    transform::Function
+    transform::AbstractExpression
     rule::AbstractExpression
 end
+transform(is::IntensionalSet) = is.transform
+rule(is::IntensionalSet) = is.rule
+
+# expression methods
+variables(is::IntensionalSet) = variables(rule(is))
+operations(is::IntensionalSet) = operations(rule(is))
+
+function Base.show(io::IO, is::IntensionalSet)
+    print(io, "{")
+    print(io, transform(is))
+    print(io, " | ")
+    print(io, rule(is))
+    print(io, "}")
+end
+
 
 ∅ = ExtensionalSet(Set([]))
+@symbols ϕ
+𝔻 = IntensionalSet(ϕ, ¬(ϕ ∈ ∅))
+
+
+# special definitions
+# natural numbers:
+#  ℕ = ...
