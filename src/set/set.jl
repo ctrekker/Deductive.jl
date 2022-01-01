@@ -71,12 +71,3 @@ function Base.show(io::IO, is::IntensionalSet)
     print(io, rule(is))
     print(io, "}")
 end
-
-
-∅ = ExtensionalSet(Set([]))
-# 𝔻 = IntensionalSet(ϕ, ¬(ϕ ∈ ∅))
-
-
-# special definitions
-# natural numbers:
-#  ℕ = ...

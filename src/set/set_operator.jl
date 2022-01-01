@@ -1,9 +1,9 @@
-export ∈, ×, ⊂
+export ×, ⊂
 
 # pure operators
 set_in = LogicalOperation((a, b)->false, :∈, 2, false, false)
-∈(x, S::MathematicalSet) = LogicalExpression(AbstractExpression[x, S], set_in)
-∉(x, S::MathematicalSet) = ¬(x ∈ S)
+Base.:(∈)(x, S::MathematicalSet) = LogicalExpression(AbstractExpression[x, S], set_in)
+Base.:(∉)(x, S::MathematicalSet) = ¬(x ∈ S)
 ⊂ = LogicalOperation((a, b)->false, :⊂, 2)
 
 # ×

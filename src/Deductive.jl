@@ -13,8 +13,9 @@ include("./search.jl")
 include("./transformation_proof.jl")
 include("./inference.jl")
 
-include("./set.jl")
-include("./set_operator.jl")
+include("./set/set.jl")
+include("./set/set_operator.jl")
+include("./set/special_definitions.jl")
 
 
 # function FreeVariable(sym::Symbol, metadata::Symbol)
