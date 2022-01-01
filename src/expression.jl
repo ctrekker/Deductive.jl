@@ -58,6 +58,7 @@ struct LogicalOperation
     associative::Bool
     commutative::Bool
 end
+LogicalOperation(bool_fn::Function, name::Symbol, argument_count::Int) = LogicalOperation(bool_fn, name, argument_count, false, false)
 isunary(op::LogicalOperation) = op.argument_count == 1
 isbinary(op::LogicalOperation) = op.argument_count == 2
 isassociative(op::LogicalOperation) = op.associative
