@@ -2,6 +2,7 @@ export ExtensionalSet, IntensionalSet, settuple, orderedpair, cardinality, ∅, 
 
 
 abstract type MathematicalSet <: AbstractExpression end
+@symbols ϕ
 
 
 struct ExtensionalSet{T} <: MathematicalSet
@@ -51,8 +52,33 @@ end
 
 struct IntensionalSet <: MathematicalSet
     transform::AbstractExpression
+    supersets::Set{LogicalExpression}
     rule::AbstractExpression
+
+    function IntensionalSet(transform::AbstractExpression, supersets::Set{LogicalExpression}, rule::AbstractExpression)
+        # todo: build out nested type system
+        function checksettype(s)
+            if operation(s) != set_in
+                return false
+            end
+            if typeof(left(s)) != LogicalSymbol
+                return false
+            end
+            if !(typeof(right(s)) <: MathematicalSet)
+                return false
+            end
+            return true
+        end
+
+        if any(checksettype.(supersets))
+            throw(ErrorException("All supersets must take form α ∈ A, where α is a `LogicalSymbol` and A is a `MathematicalSet`"))
+        end
+        new(transform, supersets, rule)
+    end
 end
+IntensionalSet(transform::AbstractExpression, supersets::Set{LogicalExpression}) = IntensionalSet(transform, supersets, ϕ ∨ ¬ϕ)
+IntensionalSet(transform::AbstractExpression, supersets::Vector{LogicalExpression}) = IntensionalSet(transform, Set{LogicalExpression}(supersets))
+IntensionalSet(transform::AbstractExpression, supersets::Tuple{Vararg{LogicalExpression}}) = IntensionalSet(transform, [supersets...])
 transform(is::IntensionalSet) = is.transform
 rule(is::IntensionalSet) = is.rule
 
@@ -70,7 +96,6 @@ end
 
 
 ∅ = ExtensionalSet(Set([]))
-@symbols ϕ
 𝔻 = IntensionalSet(ϕ, ¬(ϕ ∈ ∅))
 
 

@@ -5,7 +5,7 @@ set_in = LogicalOperation((a, b)->false, :∈, 2, false, false)
 # ×(A::ExtensionalSet{U}, B::ExtensionalSet{V}) where {U, V} = ExtensionalSet(vec([Tuple{U, V}((x, y)) for x ∈ elements(A), y ∈ elements(B)]))
 function ×(A::MathematicalSet, B::MathematicalSet)
     @unique_symbols a b
-    IntensionalSet(orderedpair(a, b), (a ∈ A) ∧ (b ∈ B))
+    IntensionalSet(orderedpair(a, b), (a ∈ A, b ∈ B))
 end
 function ×(x, A::MathematicalSet)
     @unique_symbols a
