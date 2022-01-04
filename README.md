@@ -17,7 +17,7 @@ Currently this package is unregistered in Julia's general registry. Instead inst
 ```julia
 using Deductive
 
-@symbols a b
+a, b = LogicalSymbol.([:a, :b])
 
 tableau(a ∧ b)      # true
 tableau(a ∧ b, ¬a)  # false, because contradiction
