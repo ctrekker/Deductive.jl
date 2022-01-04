@@ -12,6 +12,7 @@ include("./manipulation.jl")
 include("./search.jl")
 include("./transformation_proof.jl")
 include("./inference.jl")
+include("./atomic.jl")
 
 
 # function FreeVariable(sym::Symbol, metadata::Symbol)
