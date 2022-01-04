@@ -4,6 +4,7 @@ export ×, ⊂
 set_in = LogicalOperation((a, b)->false, :∈, 2, false, false)
 Base.:(∈)(x, S::MathematicalSet) = LogicalExpression(AbstractExpression[x, S], set_in)
 Base.:(∉)(x, S::MathematicalSet) = ¬(x ∈ S)
+# subset operator
 ⊂ = LogicalOperation((a, b)->false, :⊂, 2)
 
 # ×
@@ -37,7 +38,3 @@ function Base.:(\)(A::MathematicalSet, B::MathematicalSet)
     @unique_symbols a
     IntensionalSet(a, (a ∈ A) ∧ (a ∉ B))
 end
-
-# subset operator
-# subset_op = LogicalOperation((a, b)->false, :⊆, 2)
-# ⊆(A::MathematicalSet, B::MathematicalSet) = LogicalExpression(AbstractExpression[A, B], subset_op)

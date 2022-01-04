@@ -1,8 +1,7 @@
-export ExtensionalSet, IntensionalSet, settuple, orderedpair, cardinality, ∅, 𝔻
+export ExtensionalSet, IntensionalSet, settuple, orderedpair, cardinality
 
 
 abstract type MathematicalSet <: AbstractExpression end
-@symbols ϕ
 
 
 struct ExtensionalSet{T} <: MathematicalSet
