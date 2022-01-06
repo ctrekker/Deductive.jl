@@ -1,22 +1,72 @@
 export ¬, ∧, ∨, →, ⟷
-export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
+export LogicalSymbol, istree, isnode, name, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
 export isunary, isbinary
 export @symbols
 
 
 abstract type AbstractExpression end
 
+"""
+    LogicalSymbol(name::Symbol, metadata::Any)
+
+Creates a symbol with attached metadata.
+"""
 struct LogicalSymbol <: AbstractExpression
     name::Symbol
     metadata::Any
 end
+"""
+    LogicalSymbol(name::Symbol)
+
+Represent a logical symbolically with a provided name.
+"""
 LogicalSymbol(name::Symbol) = LogicalSymbol(name, nothing)
+"""
+    istree(expr::T) where {T <: AbstractExpression}
+
+Returns true when `expr` is a `LogicalExpression` and false otherwise.
+"""
 istree(::LogicalSymbol) = false
+"""
+    isnode(expr::T) where {T <: AbstractExpression}
+
+Returns true when `expr` is a `LogicalSymbol` and false otherwise.
+"""
 isnode(::LogicalSymbol) = true
+"""
+    name(sym::LogicalSymbol)
+
+The name of the symbol provided at instantiation. Equivalent to `symbol(sym)`.
+"""
 name(sym::LogicalSymbol) = sym.name
+"""
+    metadata(sym::LogicalSymbol)
+
+The metadata of the symbol provided at instantiation, if any. Returns `nothing` if none was provided.
+"""
 metadata(sym::LogicalSymbol) = sym.metadata
+"""
+    variables(expr::T) where {T <: AbstractExpression}
+
+Returns variables present in an entire expression tree. When the first argument is a `LogicalSymbol`, this is singleton
+set containing only the provided `LogicalSymbol`. When the argument is a `LogicalExpression`, this is a set containing the union
+of all the variables present in each argument.
+"""
 variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
+"""
+    operations(expr::T) where {T <: AbstractExpression}
+
+Returns the operations present in an entire expression tree. When given a `LogicalSymbol`, this is an empty set, whereas 
+when given a `LogicalExpression`, this is a set containing the expression's own `LogicalOperation` and the operations set
+of each of its arguments.
+"""
 operations(::LogicalSymbol) = Set{LogicalOperation}([])
+"""
+    arguments(expr::T) where {T <: AbstractExpression}
+
+Returns the arguments which an `AbstractExpression` contains. `LogicalSymbols` contain no arguments and `LogicalExpressions`
+can contain any number of arguments.
+"""
 arguments(::LogicalSymbol) = AbstractExpression[]
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
 Base.hash(sym::LogicalSymbol, h::UInt) = hash(sym.name, hash(sym.metadata, h))
@@ -28,6 +78,18 @@ Base.copy(sym::LogicalSymbol) = sym
 Base.deepcopy(sym::LogicalSymbol) = LogicalSymbol(name(sym), deepcopy(metadata(sym)))
 
 # convenience macros
+"""
+Define any number of `LogicalSymbols` with the names provided.
+
+# Examples
+```julia-repl
+julia> @symbols a  # defines symbol `a` in the current scope
+
+julia> @symbols b c d  # defines symbols `a`, `b`, and `c`
+
+julia> @symbols α β γ  # defines symbols `α`, `β`, and `γ`
+```
+"""
 macro symbols(syms...)
     definitions = [:(
         $(esc(sym)) = LogicalSymbol($(esc(Symbol))($(string(sym))))
