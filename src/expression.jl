@@ -26,6 +26,17 @@ Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, s
 Base.copy(sym::LogicalSymbol) = sym
 Base.deepcopy(sym::LogicalSymbol) = LogicalSymbol(name(sym), deepcopy(metadata(sym)))
 
+# convenience macros
+macro symbols(syms...)
+    definitions = [:(
+        $(esc(sym)) = LogicalSymbol($(esc(Symbol))($(string(sym))))
+    ) for sym ∈ syms]
+    quote
+        $(definitions...)
+        nothing
+    end
+end
+
 
 struct LogicalOperation
     bool_fn::Function
