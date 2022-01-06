@@ -265,6 +265,12 @@ end
             @test st3 ∈ parents(st2)
             st4 = a ∧ st3
             @test st4 ∈ parents(st3)
+
+            # parent removal upon argument reassignment
+            st4.arguments[2] = b
+            @test st4 ∉ parents(st3)
+            st3.arguments[2] = st4
+            @test st3 ∈ parents(st4)
         end
 
         @testset "Mutate Operation" begin
