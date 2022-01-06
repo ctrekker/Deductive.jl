@@ -53,6 +53,9 @@ end
 (op::LogicalOperation)(args::Bool...) = op.bool_fn(args...)
 (op::LogicalOperation)(args::BitVector) = op.bool_fn(args...)
 
+
+recursivevariables(args::Vector{AbstractExpression}) = reduce(∪, variables.(args))
+recursiveoperations(args::Vector{AbstractExpression}, rootop::LogicalOperation) = reduce(∪, operations.(args)) ∪ Set([rootop])
 mutable struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
@@ -60,26 +63,66 @@ mutable struct LogicalExpression <: AbstractExpression
     operations::Set{LogicalOperation}
 
     function LogicalExpression(arguments::Vector{AbstractExpression}, operation::LogicalOperation)
-        new(arguments, operation, reduce(∪, variables.(arguments)), reduce(∪, operations.(arguments)) ∪ Set([operation]))
+        new(arguments, operation, recursivevariables(arguments), recursiveoperations(arguments, operation))
     end
 end
 istree(::LogicalExpression) = true
 isnode(::LogicalExpression) = false
-operation(expr::LogicalExpression) = expr.operation
-arguments(expr::LogicalExpression) = expr.arguments
+operation(expr::LogicalExpression) = getfield(expr, :operation)
+arguments(expr::LogicalExpression) = getfield(expr, :arguments)
 metadata(::LogicalExpression) = nothing
-variables(expr::LogicalExpression) = expr.variables
-operations(expr::LogicalExpression) = expr.operations
+variables(expr::LogicalExpression) = getfield(expr, :variables)
+operations(expr::LogicalExpression) = getfield(expr, :operations)
 left(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[1] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 right(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[2] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 isassociative(expr::LogicalExpression) = length(operations(expr)) == 1 && isassociative(operation(expr))
 iscommutative(expr::LogicalExpression) = length(operations(expr)) == 1 && iscommutative(operation(expr))
-Base.hash(expr::LogicalExpression, h::UInt) = hash(expr.arguments, hash(expr.operation, h))
+Base.hash(expr::LogicalExpression, h::UInt) = hash(arguments(expr), hash(operation(expr), h))
 Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = operation(expr1) == operation(expr2) && all(arguments(expr1) .== arguments(expr2))
 
 # copy methods
 Base.copy(expr::LogicalExpression) = LogicalExpression(Vector{AbstractExpression}(arguments(expr)), operation(expr))
 Base.deepcopy(expr::LogicalExpression) = LogicalExpression(Vector{AbstractExpression}(deepcopy.(arguments(expr))), operation(expr))
+
+# mutability methods
+function Base.setproperty!(expr::LogicalExpression, name::Symbol, x)
+    if name == :arguments
+        setfield!(expr, name, x)
+        setfield!(expr, :variables, recursivevariables(x))
+    elseif name == :operation
+        setfield!(expr, name, x)
+        setfield!(expr, :operations, recursiveoperations(arguments(expr), x))
+    elseif name == :variables || name == :operations
+        throw(ErrorException("type LogicalExpression has protected field `$(name)`"))
+    else
+        throw(ErrorException("type LogicalExpression has no field `$(name)`"))
+    end
+end
+function Base.getproperty(expr::LogicalExpression, name::Symbol)
+    if name == :arguments
+        return FakeVector(expr, name, getfield(expr, name))
+    end
+
+    throw(ErrorException("use method `$(name)(my_expr)` instead"))
+end
+# see utils.jl#FakeVector
+function setvectorindex!(expr::LogicalExpression, name::Symbol, x, index::Int)
+    if name == :arguments
+        getfield(expr, :arguments)[index] = x
+        setfield!(expr, :variables, recursivevariables(arguments(expr)))
+    else
+        @warn "unexpected `setvectorindex!` call for field `$(name)`"
+    end
+end
+# this method is probably not optimized but it doesn't matter since expressions usually have two or fewer arguments, and this method
+# will hardly ever be used regardless
+function setvectorindex!(expr::LogicalExpression, name::Symbol, x, index::Union{UnitRange{Int}, StepRange{Int, Int}})
+    li = 1  # linear index, to account for StepRange
+    for i ∈ index
+        setvectorindex!(expr, name, x[li], i)
+        li += 1
+    end
+end
 
 function set_argument(expr::LogicalExpression, index::Int, new_argument::AbstractExpression)
     expr.arguments[index] = new_argument
@@ -91,9 +134,9 @@ end
 function Base.show(io::IO, expr::LogicalExpression)
     showparens(expr) = (expr isa LogicalExpression) && !isunary(expr.operation)
 
-    if isunary(expr.operation)
+    if isunary(operation(expr))
         arg = first(arguments(expr))
-        show(io, expr.operation)
+        show(io, operation(expr))
         if showparens(arg)
             print(io, "(")
         end
@@ -102,7 +145,7 @@ function Base.show(io::IO, expr::LogicalExpression)
             print(io, ")")
         end
     elseif isbinary(operation(expr))
-        args = expr.arguments
+        args = arguments(expr)
 
         if showparens(args[1])
             print(io, "(")
