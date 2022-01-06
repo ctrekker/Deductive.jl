@@ -70,11 +70,7 @@ mutable struct LogicalExpression <: AbstractExpression
 
     function LogicalExpression(arguments::Vector{AbstractExpression}, operation::LogicalOperation)
         expr = new(arguments, operation, Set{LogicalExpression}(), recursivevariables(arguments), recursiveoperations(arguments, operation), true, true)
-        for arg ∈ arguments
-            if arg isa LogicalExpression
-                push!(parents(arg), expr)
-            end
-        end
+        add_to_parents!(expr)
         expr
     end
 end
@@ -83,6 +79,22 @@ isnode(::LogicalExpression) = false
 operation(expr::LogicalExpression) = getfield(expr, :operation)
 arguments(expr::LogicalExpression) = getfield(expr, :arguments)
 parents(expr::LogicalExpression) = getfield(expr, :parents)
+add_to_parents!(expr::LogicalExpression) = add_to_parents!(expr, arguments(expr))
+function add_to_parents!(expr::LogicalExpression, relevant_args::Vector{AbstractExpression})
+    for arg ∈ relevant_args
+        if arg isa LogicalExpression
+            push!(parents(arg), expr)
+        end
+    end
+end
+remove_from_parents!(expr::LogicalExpression) = remove_from_parents!(expr, arguments(expr))
+function remove_from_parents!(expr::LogicalExpression, relevant_args::Vector{AbstractExpression})
+    for arg ∈ relevant_args
+        if arg isa LogicalExpression
+            delete!(parents(arg), expr)
+        end
+    end
+end
 metadata(::LogicalExpression) = nothing
 function variables(expr::LogicalExpression)
     if !getfield(expr, :cached_variables_valid)
@@ -112,7 +124,9 @@ Base.deepcopy(expr::LogicalExpression) = LogicalExpression(Vector{AbstractExpres
 # mutability methods
 function Base.setproperty!(expr::LogicalExpression, name::Symbol, x)
     if name == :arguments
+        remove_from_parents!(expr)
         setfield!(expr, name, x)
+        add_to_parents!(expr)
         expr.cached_variables_valid = false
     elseif name == :operation
         @assert argument_count(operation(expr)) == argument_count(x) "cannot assign operation with $(argument_count(x)) arguments to an expression with $(argument_count(operation(expr)))"
@@ -141,7 +155,9 @@ end
 # see utils.jl#FakeVector
 function setvectorindex!(expr::LogicalExpression, name::Symbol, x, index::Int)
     if name == :arguments
+        remove_from_parents!(expr, arguments(expr)[index:index])
         getfield(expr, :arguments)[index] = x
+        add_to_parents!(expr, arguments(expr)[index:index])
         expr.cached_variables_valid = false
     else
         @warn "unexpected `setvectorindex!` call for field `$(name)`"
