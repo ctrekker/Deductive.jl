@@ -45,6 +45,12 @@ function find_matches!(expr::AbstractExpression, pattern::AbstractExpression, ma
         end
 
         return all(find_matches!.(arguments(expr), arguments(pattern), Iterators.repeat([matches], length(arguments(expr)))))
+    elseif pattern isa ExtensionalSet
+        if !(expr isa ExtensionalSet) || cardinality(expr) != cardinality(pattern)
+            return false
+        end
+
+        # return all(find_matches!.())
     end
 
     if haskey(matches, pattern)
@@ -87,7 +93,7 @@ function repeated_chain_simplify(expr::AbstractExpression, rules::Vector{Pair{Ab
 end
 
 evaluate(sym::LogicalSymbol, values::Dict{LogicalSymbol, Bool}) = values[sym]
-evaluate(expr::LogicalExpression, values::Dict{LogicalSymbol, Bool}) = operation(expr)(evaluate.(arguments(expr), Iterators.repeat([values], length(arguments(expr)))))
+evaluate(expr::LogicalExpression, values::Dict{LogicalSymbol, Bool}=Dict{LogicalSymbol, Bool}()) = operation(expr).bool_fn((evaluate.(arguments(expr), Iterators.repeat([values], length(arguments(expr)))))...)
 
 
 

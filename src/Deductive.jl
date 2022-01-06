@@ -15,6 +15,7 @@ include("./inference.jl")
 
 include("./set/set.jl")
 include("./set/set_operator.jl")
+include("./set/set_proof.jl")
 include("./set/special_definitions.jl")
 
 

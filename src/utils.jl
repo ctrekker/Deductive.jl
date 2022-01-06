@@ -16,3 +16,5 @@ function subscript_number(n::Int)
     str_n = string(n)
     join([sub_dict[c] for c ∈ str_n])
 end
+
+truncate(arr::Vector, maxlen::Int) = arr[1:min(maxlen, length(arr))]

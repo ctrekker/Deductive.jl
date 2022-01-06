@@ -1,7 +1,7 @@
 export ×, ⊂
 
 # pure operators
-set_in = LogicalOperation((a, b)->false, :∈, 2, false, false)
+set_in = LogicalOperation((a, b)->set_includes(a, b), :∈, 2, false, false)
 Base.:(∈)(x, S::MathematicalSet) = LogicalExpression(AbstractExpression[x, S], set_in)
 Base.:(∉)(x, S::MathematicalSet) = ¬(x ∈ S)
 # subset operator

@@ -2,6 +2,7 @@ export ExtensionalSet, IntensionalSet, settuple, orderedpair, cardinality
 
 
 abstract type MathematicalSet <: AbstractExpression end
+istree(s::MathematicalSet) = false # TODO: refactor structure conditionals to make more sense
 
 
 struct ExtensionalSet{T} <: MathematicalSet
@@ -28,12 +29,17 @@ function Base.show(io::IO, es::ExtensionalSet)
 
     print(io, "{")
     i = 1
-    for el ∈ elements(es)
+    truncated_elements = truncate([elements(es)...], 5)
+    for el ∈ truncated_elements
         print(io, el)
         if i < cardinality(es)
             print(io, ", ")
         end
         i += 1
+    end
+    if length(truncated_elements) < cardinality(es)
+        missed_elements = cardinality(es) - length(truncated_elements)
+        print(io, "...$(missed_elements) more")
     end
     print(io, "}")
 end
