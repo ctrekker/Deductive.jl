@@ -1,38 +1,21 @@
 export ¬, ∧, ∨, →, ⟷
 export LogicalSymbol, istree, isnode, name, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
-export isunary, isbinary
+export isunary, isbinary, argument_count
 export @symbols
 
 
 abstract type AbstractExpression end
 
 """
-    LogicalSymbol(name::Symbol, metadata::Any)
+    LogicalSymbol(name::Symbol, metadata::Any=nothing)
 
-Creates a symbol with attached metadata.
+Represent a logical symbolically with a provided name. By default the attached metadata is set to `nothing`.
 """
 struct LogicalSymbol <: AbstractExpression
     name::Symbol
     metadata::Any
 end
-"""
-    LogicalSymbol(name::Symbol)
-
-Represent a logical symbolically with a provided name.
-"""
 LogicalSymbol(name::Symbol) = LogicalSymbol(name, nothing)
-"""
-    istree(expr::T) where {T <: AbstractExpression}
-
-Returns true when `expr` is a `LogicalExpression` and false otherwise.
-"""
-istree(::LogicalSymbol) = false
-"""
-    isnode(expr::T) where {T <: AbstractExpression}
-
-Returns true when `expr` is a `LogicalSymbol` and false otherwise.
-"""
-isnode(::LogicalSymbol) = true
 """
     name(sym::LogicalSymbol)
 
@@ -45,29 +28,7 @@ name(sym::LogicalSymbol) = sym.name
 The metadata of the symbol provided at instantiation, if any. Returns `nothing` if none was provided.
 """
 metadata(sym::LogicalSymbol) = sym.metadata
-"""
-    variables(expr::T) where {T <: AbstractExpression}
 
-Returns variables present in an entire expression tree. When the first argument is a `LogicalSymbol`, this is singleton
-set containing only the provided `LogicalSymbol`. When the argument is a `LogicalExpression`, this is a set containing the union
-of all the variables present in each argument.
-"""
-variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
-"""
-    operations(expr::T) where {T <: AbstractExpression}
-
-Returns the operations present in an entire expression tree. When given a `LogicalSymbol`, this is an empty set, whereas 
-when given a `LogicalExpression`, this is a set containing the expression's own `LogicalOperation` and the operations set
-of each of its arguments.
-"""
-operations(::LogicalSymbol) = Set{LogicalOperation}([])
-"""
-    arguments(expr::T) where {T <: AbstractExpression}
-
-Returns the arguments which an `AbstractExpression` contains. `LogicalSymbols` contain no arguments and `LogicalExpressions`
-can contain any number of arguments.
-"""
-arguments(::LogicalSymbol) = AbstractExpression[]
 Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
 Base.hash(sym::LogicalSymbol, h::UInt) = hash(sym.name, hash(sym.metadata, h))
 Base.:(==)(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
@@ -101,6 +62,12 @@ macro symbols(syms...)
 end
 
 
+"""
+    LogicalOperation(bool_fn::Function, name::Symbol, argument_count::Int, associative::Bool, commutative::Bool)
+
+Defines a logical operator which can be used to form expressions with. Usually you don't need to define your own
+operators, just use the ones built-in to the package if possible.
+"""
 struct LogicalOperation
     bool_fn::Function
     name::Symbol
@@ -108,10 +75,35 @@ struct LogicalOperation
     associative::Bool
     commutative::Bool
 end
+"""
+    argument_count(op::LogicalOperation)
+
+The number of arguments which the given operation expects to receive.
+"""
 argument_count(op::LogicalOperation) = op.argument_count
+"""
+    isunary(op::LogicalOperation)
+
+True if the given operation only receives one argument, false otherwise.
+"""
 isunary(op::LogicalOperation) = argument_count(op) == 1
+"""
+    isbinary(op::LogicalOperation)
+
+True if the given operation receives two arguments, false otherwise.
+"""
 isbinary(op::LogicalOperation) = argument_count(op) == 2
+"""
+    isassociative(op::LogicalOperation)
+    
+True if the given operation is associative, false otherwise.
+"""
 isassociative(op::LogicalOperation) = op.associative
+"""
+    iscommutative(op::LogicalOperation)
+
+True if the given operation is commutative, false otherwise.
+"""
 iscommutative(op::LogicalOperation) = op.commutative
 Base.show(io::IO, op::LogicalOperation) = print(io, string(op.name))
 Base.hash(op::LogicalOperation, h::UInt) = hash(op.name, hash(argument_count(op), hash(op.associative, hash(op.commutative, h))))
@@ -119,6 +111,13 @@ function Base.:(==)(op1::LogicalOperation, op2::LogicalOperation)
     op1.name == op2.name && argument_count(op1) == argument_count(op2) && isassociative(op1) == isassociative(op2) && iscommutative(op1) == iscommutative(op2)
 end
 
+"""
+    (op::LogicalOperation)(args::AbstractExpression...)
+
+This function is the foundation of expression building, as it allows instances of `LogicalOperations` to be treated as real
+Julia functions. When called this function returns a `LogicalExpression` representing the application of the given operator
+on the provided arguments.
+"""
 function (op::LogicalOperation)(args::AbstractExpression...)
     if length(args) != argument_count(op)
         throw(ErrorException("Invalid argument count $(length(args)). Expected $(argument_count(op)) arguments."))
@@ -131,6 +130,12 @@ end
 
 recursivevariables(args::Vector{AbstractExpression}) = reduce(∪, variables.(args))
 recursiveoperations(args::Vector{AbstractExpression}, rootop::LogicalOperation) = reduce(∪, operations.(args)) ∪ Set([rootop])
+"""
+    LogicalExpression(arguments::Vector{AbstractExpression}, operation::LogicalOperation)
+
+Constructs an expression with given arguments and logical operation. Please refrain from using this syntax, instead using
+the "operators as functions" syntax, where a `LogicalOperation` instance can be called to produce a `LogicalExpression`.
+"""
 mutable struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
@@ -148,10 +153,7 @@ mutable struct LogicalExpression <: AbstractExpression
         expr
     end
 end
-istree(::LogicalExpression) = true
-isnode(::LogicalExpression) = false
 operation(expr::LogicalExpression) = getfield(expr, :operation)
-arguments(expr::LogicalExpression) = getfield(expr, :arguments)
 parents(expr::LogicalExpression) = getfield(expr, :parents)
 add_to_parents!(expr::LogicalExpression) = add_to_parents!(expr, arguments(expr))
 function add_to_parents!(expr::LogicalExpression, relevant_args::Vector{AbstractExpression})
@@ -170,20 +172,6 @@ function remove_from_parents!(expr::LogicalExpression, relevant_args::Vector{Abs
     end
 end
 metadata(::LogicalExpression) = nothing
-function variables(expr::LogicalExpression)
-    if !getfield(expr, :cached_variables_valid)
-        setfield!(expr, :cached_variables, recursivevariables(arguments(expr)))
-        expr.cached_variables_valid = true
-    end
-    getfield(expr, :cached_variables)
-end
-function operations(expr::LogicalExpression)
-    if !getfield(expr, :cached_operations_valid)
-        setfield!(expr, :cached_operations, recursiveoperations(arguments(expr), operation(expr)))
-        expr.cached_operations_valid = true
-    end
-    getfield(expr, :cached_operations)
-end
 left(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[1] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 right(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[2] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
 isassociative(expr::LogicalExpression) = length(operations(expr)) == 1 && isassociative(operation(expr))
@@ -247,12 +235,6 @@ function setvectorindex!(expr::LogicalExpression, name::Symbol, x, index::Union{
     end
 end
 
-function set_argument(expr::LogicalExpression, index::Int, new_argument::AbstractExpression)
-    expr.arguments[index] = new_argument
-    expr.variables = reduce(∪, variables.(arguments(expr)))
-    expr
-end
-
 
 function Base.show(io::IO, expr::LogicalExpression)
     showparens(expr) = (expr isa LogicalExpression) && !isunary(operation(expr))
@@ -291,6 +273,65 @@ function Base.show(io::IO, expr::LogicalExpression)
         end
     end
 end
+
+
+# Standard AbstractExpression interface methods
+"""
+    istree(expr::T) where {T <: AbstractExpression}
+
+Returns true when `expr` is a `LogicalExpression` and false otherwise.
+"""
+istree(::LogicalSymbol) = false
+istree(::LogicalExpression) = true
+
+"""
+    isnode(expr::T) where {T <: AbstractExpression}
+
+Returns true when `expr` is a `LogicalSymbol` and false otherwise.
+"""
+isnode(::LogicalSymbol) = true
+isnode(::LogicalExpression) = false
+
+"""
+    variables(expr::T) where {T <: AbstractExpression}
+
+Returns variables present in an entire expression tree. When the first argument is a `LogicalSymbol`, this is singleton
+set containing only the provided `LogicalSymbol`. When the argument is a `LogicalExpression`, this is a set containing the union
+of all the variables present in each argument.
+"""
+variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
+function variables(expr::LogicalExpression)
+    if !getfield(expr, :cached_variables_valid)
+        setfield!(expr, :cached_variables, recursivevariables(arguments(expr)))
+        expr.cached_variables_valid = true
+    end
+    getfield(expr, :cached_variables)
+end
+
+"""
+    operations(expr::T) where {T <: AbstractExpression}
+
+Returns the operations present in an entire expression tree. When given a `LogicalSymbol`, this is an empty set, whereas 
+when given a `LogicalExpression`, this is a set containing the expression's own `LogicalOperation` and the operations set
+of each of its arguments.
+"""
+operations(::LogicalSymbol) = Set{LogicalOperation}([])
+function operations(expr::LogicalExpression)
+    if !getfield(expr, :cached_operations_valid)
+        setfield!(expr, :cached_operations, recursiveoperations(arguments(expr), operation(expr)))
+        expr.cached_operations_valid = true
+    end
+    getfield(expr, :cached_operations)
+end
+
+"""
+    arguments(expr::T) where {T <: AbstractExpression}
+
+Returns the arguments which an `AbstractExpression` contains. `LogicalSymbols` contain no arguments and `LogicalExpressions`
+can contain any number of arguments.
+"""
+arguments(::LogicalSymbol) = AbstractExpression[]
+arguments(expr::LogicalExpression) = getfield(expr, :arguments)
 
 
 # ASSOCIATION
