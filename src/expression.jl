@@ -34,19 +34,20 @@ struct LogicalOperation
     associative::Bool
     commutative::Bool
 end
-isunary(op::LogicalOperation) = op.argument_count == 1
-isbinary(op::LogicalOperation) = op.argument_count == 2
+argument_count(op::LogicalOperation) = op.argument_count
+isunary(op::LogicalOperation) = argument_count(op) == 1
+isbinary(op::LogicalOperation) = argument_count(op) == 2
 isassociative(op::LogicalOperation) = op.associative
 iscommutative(op::LogicalOperation) = op.commutative
 Base.show(io::IO, op::LogicalOperation) = print(io, string(op.name))
-Base.hash(op::LogicalOperation, h::UInt) = hash(op.name, hash(op.argument_count, hash(op.associative, hash(op.commutative, h))))
+Base.hash(op::LogicalOperation, h::UInt) = hash(op.name, hash(argument_count(op), hash(op.associative, hash(op.commutative, h))))
 function Base.:(==)(op1::LogicalOperation, op2::LogicalOperation)
-    op1.name == op2.name && op1.argument_count == op2.argument_count && isassociative(op1) == isassociative(op2) && iscommutative(op1) == iscommutative(op2)
+    op1.name == op2.name && argument_count(op1) == argument_count(op2) && isassociative(op1) == isassociative(op2) && iscommutative(op1) == iscommutative(op2)
 end
 
 function (op::LogicalOperation)(args::AbstractExpression...)
-    if length(args) != op.argument_count
-        throw(ErrorException("Invalid argument count $(length(args)). Expected $(op.argument_count) arguments."))
+    if length(args) != argument_count(op)
+        throw(ErrorException("Invalid argument count $(length(args)). Expected $(argument_count(op)) arguments."))
     end
     return LogicalExpression(AbstractExpression[args...], op)
 end
@@ -90,6 +91,7 @@ function Base.setproperty!(expr::LogicalExpression, name::Symbol, x)
         setfield!(expr, name, x)
         setfield!(expr, :variables, recursivevariables(x))
     elseif name == :operation
+        @assert argument_count(operation(expr)) == argument_count(x) "cannot assign operation with $(argument_count(x)) arguments to an expression with $(argument_count(operation(expr)))"
         setfield!(expr, name, x)
         setfield!(expr, :operations, recursiveoperations(arguments(expr), x))
     elseif name == :variables || name == :operations
@@ -132,7 +134,7 @@ end
 
 
 function Base.show(io::IO, expr::LogicalExpression)
-    showparens(expr) = (expr isa LogicalExpression) && !isunary(expr.operation)
+    showparens(expr) = (expr isa LogicalExpression) && !isunary(operation(expr))
 
     if isunary(operation(expr))
         arg = first(arguments(expr))
