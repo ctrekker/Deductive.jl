@@ -1,5 +1,5 @@
 export ¬, ∧, ∨, →, ⟷
-export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, left, right, isassociative, iscommutative
+export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
 export isunary, isbinary
 
 
@@ -61,31 +61,40 @@ mutable struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
 
+    parents::Set{LogicalExpression}
+
     cached_variables::Set{LogicalSymbol}
     cached_operations::Set{LogicalOperation}
     cached_variables_valid::Bool
     cached_operations_valid::Bool
 
     function LogicalExpression(arguments::Vector{AbstractExpression}, operation::LogicalOperation)
-        new(arguments, operation, recursivevariables(arguments), recursiveoperations(arguments, operation), true, true)
+        expr = new(arguments, operation, Set{LogicalExpression}(), recursivevariables(arguments), recursiveoperations(arguments, operation), true, true)
+        for arg ∈ arguments
+            if arg isa LogicalExpression
+                push!(parents(arg), expr)
+            end
+        end
+        expr
     end
 end
 istree(::LogicalExpression) = true
 isnode(::LogicalExpression) = false
 operation(expr::LogicalExpression) = getfield(expr, :operation)
 arguments(expr::LogicalExpression) = getfield(expr, :arguments)
+parents(expr::LogicalExpression) = getfield(expr, :parents)
 metadata(::LogicalExpression) = nothing
 function variables(expr::LogicalExpression)
     if !getfield(expr, :cached_variables_valid)
         setfield!(expr, :cached_variables, recursivevariables(arguments(expr)))
-        setfield!(expr, :cached_variables_valid, true)
+        expr.cached_variables_valid = true
     end
     getfield(expr, :cached_variables)
 end
 function operations(expr::LogicalExpression)
     if !getfield(expr, :cached_operations_valid)
         setfield!(expr, :cached_operations, recursiveoperations(arguments(expr), operation(expr)))
-        setfield!(expr, :cached_operations_valid, true)
+        expr.cached_operations_valid = true
     end
     getfield(expr, :cached_operations)
 end
@@ -104,12 +113,19 @@ Base.deepcopy(expr::LogicalExpression) = LogicalExpression(Vector{AbstractExpres
 function Base.setproperty!(expr::LogicalExpression, name::Symbol, x)
     if name == :arguments
         setfield!(expr, name, x)
-        setfield!(expr, :cached_variables_valid, false)
+        expr.cached_variables_valid = false
     elseif name == :operation
         @assert argument_count(operation(expr)) == argument_count(x) "cannot assign operation with $(argument_count(x)) arguments to an expression with $(argument_count(operation(expr)))"
         setfield!(expr, name, x)
-        setfield!(expr, :cached_operations_valid, false)
-    elseif name == :cached_variables || name == :cached_operations || name == :cached_variables_valid || name == :cached_operations_valid
+        expr.cached_operations_valid = false
+    elseif name == :cached_variables_valid || name == :cached_operations_valid
+        setfield!(expr, name, x)
+        if !x  # cache invalidation, so propagate the invalidation up the expression tree
+            for parent ∈ parents(expr)
+                setproperty!(parent, name, x)
+            end
+        end
+    elseif name == :cached_variables || name == :cached_operations
         throw(ErrorException("type LogicalExpression has protected field `$(name)`"))
     else
         throw(ErrorException("type LogicalExpression has no field `$(name)`"))
@@ -126,7 +142,7 @@ end
 function setvectorindex!(expr::LogicalExpression, name::Symbol, x, index::Int)
     if name == :arguments
         getfield(expr, :arguments)[index] = x
-        setfield!(expr, :cached_variables_valid, false)
+        expr.cached_variables_valid = false
     else
         @warn "unexpected `setvectorindex!` call for field `$(name)`"
     end

@@ -258,6 +258,15 @@ end
             @test arguments(dc_st2)[2] === arguments(st2)[2]  # the second arg is a symbol so it shouldn't be copied
         end
 
+        @testset "Parent Expressions" begin
+            st2 = a ∧ b
+            @test isempty(parents(st2))
+            st3 = a ∧ st2
+            @test st3 ∈ parents(st2)
+            st4 = a ∧ st3
+            @test st4 ∈ parents(st3)
+        end
+
         @testset "Mutate Operation" begin
             # simple expression
             st2 = a ∧ b
