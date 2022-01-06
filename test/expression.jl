@@ -236,5 +236,26 @@ end
             @test Deductive.associative_tree_count(5) == 42
             @test Deductive.associative_tree_count(6) == 132
         end
+
+
+        # mutability tests
+        @testset "Copy Expression" begin
+            # Base.copy tests
+            copied_st = copy(st)
+            @test copied_st == st   # still the same expression
+            @test copied_st !== st  # but not the same reference
+            @test first(arguments(copied_st)) == first(arguments(copied_st))
+            @test first(arguments(copied_st)) === first(arguments(copied_st))
+
+            # Base.deepcopy tests
+            st2 = (a ∧ b) ∧ c
+            dc_st2 = deepcopy(st2)
+            @test dc_st2 == st2
+            @test dc_st2 !== st2
+            @test first(arguments(dc_st2)) == first(arguments(st2))
+            @test first(arguments(dc_st2)) !== first(arguments(st2))
+            @test arguments(dc_st2)[2] == arguments(st2)[2]
+            @test arguments(dc_st2)[2] === arguments(st2)[2]  # the second arg is a symbol so it shouldn't be copied
+        end
     end
 end

@@ -12,6 +12,7 @@ end
 LogicalSymbol(name::Symbol) = LogicalSymbol(name, nothing)
 istree(::LogicalSymbol) = false
 isnode(::LogicalSymbol) = true
+name(sym::LogicalSymbol) = sym.name
 metadata(sym::LogicalSymbol) = sym.metadata
 variables(sym::LogicalSymbol) = Set{LogicalSymbol}(LogicalSymbol[sym])
 operations(::LogicalSymbol) = Set{LogicalOperation}([])
@@ -20,6 +21,10 @@ Base.show(io::IO, sym::LogicalSymbol) = print(io, string(sym.name))
 Base.hash(sym::LogicalSymbol, h::UInt) = hash(sym.name, hash(sym.metadata, h))
 Base.:(==)(sym1::LogicalSymbol, sym2::LogicalSymbol) = sym1.name == sym2.name && isequal(metadata(sym1), metadata(sym2))
 Base.isless(sym1::LogicalSymbol, sym2::LogicalSymbol) = Base.isless(sym1.name, sym2.name)
+
+# fake copy methods since symbols are immutable
+Base.copy(sym::LogicalSymbol) = sym
+Base.deepcopy(sym::LogicalSymbol) = LogicalSymbol(name(sym), deepcopy(metadata(sym)))
 
 
 struct LogicalOperation
@@ -48,10 +53,9 @@ end
 (op::LogicalOperation)(args::Bool...) = op.bool_fn(args...)
 (op::LogicalOperation)(args::BitVector) = op.bool_fn(args...)
 
-struct LogicalExpression <: AbstractExpression
+mutable struct LogicalExpression <: AbstractExpression
     arguments::Vector{AbstractExpression}
     operation::LogicalOperation
-    # these sets are the reason we make expressions immutable
     variables::Set{LogicalSymbol}
     operations::Set{LogicalOperation}
 
@@ -72,6 +76,11 @@ isassociative(expr::LogicalExpression) = length(operations(expr)) == 1 && isasso
 iscommutative(expr::LogicalExpression) = length(operations(expr)) == 1 && iscommutative(operation(expr))
 Base.hash(expr::LogicalExpression, h::UInt) = hash(expr.arguments, hash(expr.operation, h))
 Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = operation(expr1) == operation(expr2) && all(arguments(expr1) .== arguments(expr2))
+
+# copy methods
+Base.copy(expr::LogicalExpression) = LogicalExpression(Vector{AbstractExpression}(arguments(expr)), operation(expr))
+Base.deepcopy(expr::LogicalExpression) = LogicalExpression(Vector{AbstractExpression}(deepcopy.(arguments(expr))), operation(expr))
+
 function set_argument(expr::LogicalExpression, index::Int, new_argument::AbstractExpression)
     expr.arguments[index] = new_argument
     expr.variables = reduce(∪, variables.(arguments(expr)))
