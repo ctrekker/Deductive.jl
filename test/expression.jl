@@ -236,5 +236,97 @@ end
             @test Deductive.associative_tree_count(5) == 42
             @test Deductive.associative_tree_count(6) == 132
         end
+
+
+        # mutability tests
+        @testset "Copy Expression" begin
+            # Base.copy tests
+            copied_st = copy(st)
+            @test copied_st == st   # still the same expression
+            @test copied_st !== st  # but not the same reference
+            @test first(arguments(copied_st)) == first(arguments(copied_st))
+            @test first(arguments(copied_st)) === first(arguments(copied_st))
+
+            # Base.deepcopy tests
+            st2 = (a ∧ b) ∧ c
+            dc_st2 = deepcopy(st2)
+            @test dc_st2 == st2
+            @test dc_st2 !== st2
+            @test first(arguments(dc_st2)) == first(arguments(st2))
+            @test first(arguments(dc_st2)) !== first(arguments(st2))
+            @test arguments(dc_st2)[2] == arguments(st2)[2]
+            @test arguments(dc_st2)[2] === arguments(st2)[2]  # the second arg is a symbol so it shouldn't be copied
+        end
+
+        @testset "Parent Expressions" begin
+            st2 = a ∧ b
+            @test isempty(parents(st2))
+            st3 = a ∧ st2
+            @test st3 ∈ parents(st2)
+            st4 = a ∧ st3
+            @test st4 ∈ parents(st3)
+        end
+
+        @testset "Mutate Operation" begin
+            # simple expression
+            st2 = a ∧ b
+            @test operation(st2) == ∧
+            @test operations(st2) == Set{Deductive.LogicalOperation}([∧])
+            st2.operation = ∨
+            @test operation(st2) == ∨
+            @test operations(st2) == Set{Deductive.LogicalOperation}([∨])
+            st2.operation = →
+            @test operation(st2) == →
+            @test operations(st2) == Set{Deductive.LogicalOperation}([→])
+            try
+                st2.operation = ¬  # cannot set operation of different argument count
+                @test false
+            catch e
+                @test true
+            end
+
+            # nested expression
+            st3 = (a ∧ b) → (c ∨ d)
+            @test operation(st3) == →
+            @test operations(st3) == Set{Deductive.LogicalOperation}([→, ∧, ∨])
+            st3.operation = ⟷
+            @test operation(st3) == ⟷
+            @test operations(st3) == Set{Deductive.LogicalOperation}([⟷, ∧, ∨])
+            st3.operation = ∧
+            @test operation(st3) == ∧
+            @test operations(st3) == Set{Deductive.LogicalOperation}([∧, ∨])
+            st3.operation = →
+            arguments(st3)[1].operation = →
+            @test operation(first(arguments(st3))) == →
+            @test operations(st3) == Set{Deductive.LogicalOperation}([→, ∨])
+            arguments(st3)[2].operation = →
+            @test operation(last(arguments(st3))) == →
+            @test operations(st3) == Set{Deductive.LogicalOperation}([→])
+        end
+
+        @testset "Mutate Arguments" begin
+            # simple expression
+            st2 = a ∧ b
+            @test arguments(st2) == Vector{Deductive.AbstractExpression}([a, b])
+            @test variables(st2) == Set{Deductive.LogicalSymbol}([a, b])
+            st2.arguments[1] = b
+            @test arguments(st2) == Vector{Deductive.AbstractExpression}([b, b])
+            @test variables(st2) == Set{Deductive.LogicalSymbol}([b])
+            st2.arguments[2] = a
+            @test arguments(st2) == Vector{Deductive.AbstractExpression}([b, a])
+            @test variables(st2) == Set{Deductive.LogicalSymbol}([a, b])
+            st2.arguments[1:2] = [a, a]
+            @test arguments(st2) == Vector{Deductive.AbstractExpression}([a, a])
+            @test variables(st2) == Set{Deductive.LogicalSymbol}([a])
+
+            # nested expression
+            st3 = (a ∧ b) → (c ∨ d)
+            arguments(st3)[1].arguments[1] = b
+            @test arguments(st3) == Vector{Deductive.AbstractExpression}([b ∧ b, c ∨ d])
+            @test variables(st3) == Set{Deductive.LogicalSymbol}([b, c, d])
+            arguments(st3)[2].arguments[2] = a
+            @test arguments(st3) == Vector{Deductive.AbstractExpression}([b ∧ b, c ∨ a])
+            @test variables(st3) == Set{Deductive.LogicalSymbol}([b, c, a])
+        end
     end
 end
