@@ -1,6 +1,7 @@
 export ¬, ∧, ∨, →, ⟷
 export LogicalSymbol, istree, isnode, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
 export isunary, isbinary
+export @symbols
 
 
 abstract type AbstractExpression end
