@@ -3,6 +3,12 @@ export contains_expression
 # SUBEXPRESSION SEARCH
 
 # if haystack is a logical symbol, the kneedle must be equal to be a subexpression
+"""
+    contains_expression(haystack::AbstractExpression, kneedle::AbstractExpression)
+
+Searches for a subexpression `kneedle` recursively within the `haystack` expression. Returns true if a match can be found
+and false otherwise.
+"""
 contains_expression(haystack::LogicalSymbol, kneedle::AbstractExpression) = isequal(haystack, kneedle)
 
 # TODO: come up with quicker subexpression algorithm for LogicalExpressions

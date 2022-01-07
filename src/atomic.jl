@@ -1,9 +1,19 @@
 export ⊼, atomize
 
+"""
+    a ⊼ b
+
+Not AND operator (NAND for short). The NAND operator is a functionally complete boolean operator, meaning all other boolean
+operations can be expressed with only NAND operations.
+"""
 ⊼ = LogicalOperation((x, y) -> !(x && y), :⊼, 2, true, true)
 
+"""
+    atomize(expr::AbstractExpression)
+
+Converts an expression into its directly converted NAND-only form.
+"""
 # Reduce an expression to its atomic form using the NAND operation
-atomize(s::LogicalSymbol) = s
 function atomize(expr::LogicalExpression)
     parts = atomize.(arguments(expr))
     expr_op = operation(expr)
@@ -24,3 +34,4 @@ function atomize(expr::LogicalExpression)
 
     throw(ErrorException("Expression contains unsupported atomic operator $(expr_op)"))
 end
+atomize(s::LogicalSymbol) = s

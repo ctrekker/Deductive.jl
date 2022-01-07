@@ -1,5 +1,16 @@
+"""
+    flat_repeat(x, n)
+
+Shortcut for `Iterators.repeat([x], n)`
+"""
 flat_repeat(x, n) = Iterators.repeat([x], n)
 
+"""
+    FakeVector{X, T}(creator::X, fieldname::Symbol, vec::Vector{T})
+
+A utility structure which calls a function `setvectorindex!` when the `Base.setindex!` function is called on it. This
+allows for some smart updating of expression trees when mutated.
+"""
 struct FakeVector{X, T}
     creator::X
     fieldname::Symbol
