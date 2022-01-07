@@ -153,8 +153,26 @@ mutable struct LogicalExpression <: AbstractExpression
         expr
     end
 end
+"""
+    operation(expr::LogicalExpression)
+
+The operation which is performed on the arguments of the given `LogicalExpression`.
+"""
 operation(expr::LogicalExpression) = getfield(expr, :operation)
+"""
+    parents(expr::LogicalExpression)
+
+The parent expressions of a given subexpression. If an expression is never used within another, it will have no parents.
+In most expressions there will only be one parent, but it is possible for an expression assigned to a variable to have
+multiple parents by using it as a "named subexpression".
+"""
 parents(expr::LogicalExpression) = getfield(expr, :parents)
+
+"""
+    add_to_parents!(expr::LogicalExpression)
+
+Adds an expression to the `parents` set of all its arguments. For internal use only.
+"""
 add_to_parents!(expr::LogicalExpression) = add_to_parents!(expr, arguments(expr))
 function add_to_parents!(expr::LogicalExpression, relevant_args::Vector{AbstractExpression})
     for arg ∈ relevant_args
@@ -163,6 +181,12 @@ function add_to_parents!(expr::LogicalExpression, relevant_args::Vector{Abstract
         end
     end
 end
+
+"""
+    remove_from_parents!(expr::LogicalExpression)
+
+Removes an expression from the `parents` set of all its arguments. For internal use only.
+"""
 remove_from_parents!(expr::LogicalExpression) = remove_from_parents!(expr, arguments(expr))
 function remove_from_parents!(expr::LogicalExpression, relevant_args::Vector{AbstractExpression})
     for arg ∈ relevant_args
@@ -172,9 +196,29 @@ function remove_from_parents!(expr::LogicalExpression, relevant_args::Vector{Abs
     end
 end
 metadata(::LogicalExpression) = nothing
+"""
+    left(expr::LogicalExpression)
+
+If the expression is binary, this method returns the left-hand operand.
+"""
 left(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[1] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
+"""
+    right(expr::LogicalExpression)
+
+If the expression is binary, this method returns the right-hand operand.
+"""
 right(expr::LogicalExpression) = isbinary(operation(expr)) ? arguments(expr)[2] : throw(ErrorException("Operation $(operation(expr)) is not binary"))
+"""
+    isassociative(expr::LogicalExpression)
+
+Checks if the entire expression is associative based on the associative property of its constituent operations.
+"""
 isassociative(expr::LogicalExpression) = length(operations(expr)) == 1 && isassociative(operation(expr))
+"""
+    iscommutative(expr::LogicalExpression)
+
+Checks if the entire expression is commutative based on the commutative property of its constituent operations.
+"""
 iscommutative(expr::LogicalExpression) = length(operations(expr)) == 1 && iscommutative(operation(expr))
 Base.hash(expr::LogicalExpression, h::UInt) = hash(arguments(expr), hash(operation(expr), h))
 Base.:(==)(expr1::LogicalExpression, expr2::LogicalExpression) = operation(expr1) == operation(expr2) && all(arguments(expr1) .== arguments(expr2))
@@ -334,17 +378,33 @@ arguments(::LogicalSymbol) = AbstractExpression[]
 arguments(expr::LogicalExpression) = getfield(expr, :arguments)
 
 
-# ASSOCIATION
-associative_ordering(sym::LogicalSymbol) = [sym]
-associative_ordering(expr::LogicalExpression) = reduce(vcat, associative_ordering.(arguments(expr)))
+# ASSOCIATION (perhaps move this elsewhere eventually?)
+"""
+    associative_ordering(expr::LogicalExpression)
 
-isequal_associative(sym1::LogicalSymbol, sym2::LogicalSymbol) = isequal(sym1, sym2)
+Descends the expression tree with a left-side-first depth first search. Each symbol encountered is added to a list in
+the order it appears in this search and is returned by this function.
+"""
+associative_ordering(expr::LogicalExpression) = reduce(vcat, associative_ordering.(arguments(expr)))
+associative_ordering(sym::LogicalSymbol) = [sym]
+
+"""
+    isequal_associative(expr1::LogicalExpression, expr2::LogicalExpression)
+
+Checks whether an expression is equal with another ignoring the associative ordering of each expression.
+"""
 function isequal_associative(expr1::LogicalExpression, expr2::LogicalExpression)
-    length(operations(expr1)) == 1 && operations(expr1) == operations(expr2) && associative_ordering(expr1) == associative_ordering(expr2)
+    length(operations(expr1)) == 1 && isassociative(first(operations(expr1))) && operations(expr1) == operations(expr2) && associative_ordering(expr1) == associative_ordering(expr2)
 end
+isequal_associative(sym1::LogicalSymbol, sym2::LogicalSymbol) = isequal(sym1, sym2)
 isequal_associative(::AbstractExpression, ::AbstractExpression) = false
 
 _associative_tree_count_cache = Dict()
+"""
+    associative_tree_count(nodes::Int)
+
+Function which calculates how many ways to arrange parenthesis in an expression there are with a given node count.
+"""
 function associative_tree_count(nodes::Int)
     if nodes == 0
         return 1
@@ -369,11 +429,35 @@ end
 
 
 # OPERATORS
-# unary operator
+"""
+    ¬(x)
+
+Logical negation operator, typed with `\\neg`. Boolean equivalent is the `!` operator.
+"""
 const ¬ = LogicalOperation(x -> !x, :¬, 1, false, false)
 
 # binary operators
+"""
+    x ∧ y
+
+Logical conjunction operator, typed with `\\wedge`. Boolean equivalent is the `&&` operator.
+"""
 const ∧ = LogicalOperation((x, y) -> x && y, :∧, 2, true, true)
+"""
+    x ∨ y
+
+Logical disjunction operator, typed with `\\vee`. Boolean equivalent is the `||` operator.
+"""
 const ∨ = LogicalOperation((x, y) -> x || y, :∨, 2, true, true)
+"""
+    x → y
+
+Logical implication operator, typed with `\\rightarrow`.
+"""
 const → = LogicalOperation((x, y) -> (¬x ∨ y), :→, 2, false, false)
+"""
+    x ⟷ y
+
+Logical equivalence operator, typed with `\\longleftrightarrow`.
+"""
 const ⟷ = LogicalOperation((x, y) -> (x ∧ y) ∨ (¬x ∧ ¬y), :⟷, 2, true, true)
