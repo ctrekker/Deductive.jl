@@ -77,11 +77,6 @@ Provability operator used exclusively in calculus definitions. A ⊢ B means tha
 """
 ⊢ = LogicalOperation((a, b) -> true, :⊢, 2, false, false)
 
-"""
-    PropositionalCalculus
-
-Default calculus definition for zeroth-order (propositional) logic.
-"""
 @logical_calculus PropositionalCalculus begin
     "Modus Ponens", (
         p → q,
@@ -162,6 +157,12 @@ Default calculus definition for zeroth-order (propositional) logic.
         p ∨ r
     ), q
 end
+"""
+    PropositionalCalculus
+
+Default calculus definition for zeroth-order (propositional) logic.
+"""
+PropositionalCalculus
 
 @logical_calculus ExtendedPropositionalCalculus begin
     # Rules for negations
