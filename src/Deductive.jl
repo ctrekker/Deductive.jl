@@ -17,6 +17,7 @@ include("./set/set.jl")
 include("./set/set_operator.jl")
 include("./set/set_proof.jl")
 include("./set/special_definitions.jl")
+include("./set/set_equality.jl")
 
 
 # function FreeVariable(sym::Symbol, metadata::Symbol)
