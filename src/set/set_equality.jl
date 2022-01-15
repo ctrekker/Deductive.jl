@@ -19,3 +19,12 @@ function get_canonical_name(node::ExtensionalSet)
 end
 
 
+
+
+# SET MATCHING
+function set_matching(pattern::ExtensionalSet, haystack::ExtensionalSet)
+    
+end
+function set_matching(sym::LogicalSymbol, haystack::ExtensionalSet)
+    
+end
