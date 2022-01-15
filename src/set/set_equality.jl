@@ -1,4 +1,4 @@
-export classify_matches, set_matches
+export classify_matches, set_matches, set_symbol_matches
 
 # set equality is checked using a linear time tree isomorphism algorithm
 #  https://logic.pdmi.ras.ru/~smal/files/smal_jass08.pdf
@@ -25,7 +25,7 @@ end
 
 # SET MATCHING
 @enum MatchClassification EXACT_MATCH PARTIAL_MATCH NO_MATCHES
-function classify_matches(matches::Dict{LogicalSymbol, Vector{AbstractExpression}})
+function classify_matches(matches::Dict{LogicalSymbol, Set{AbstractExpression}})
     match_lengths = length.(collect(values(matches)))
     if any(match_lengths .== 0)
         return NO_MATCHES
@@ -35,9 +35,11 @@ function classify_matches(matches::Dict{LogicalSymbol, Vector{AbstractExpression
     end
     return PARTIAL_MATCH
 end
-function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
-    unreduced_matches = set_matches_unreduced(pattern, haystack)
+function classify_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
+    classify_matches(set_matches(pattern, haystack))
+end
 
+function reduce_matches!(unreduced_matches::Dict)
     # TODO: consider this scenario:
     # a = [1, 2]
     # b = [1, 2]
@@ -48,7 +50,7 @@ function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
 
     continue_running = true
 
-    completed_symbols = Set{LogicalSymbol}()
+    completed_symbols = Set{AbstractExpression}()
     while continue_running
         continue_running = false
         for (sym, matches) ∈ unreduced_matches
@@ -62,7 +64,7 @@ function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
                         continue
                     end
                     if ideal_match ∈ matches2
-                        deleteat!(unreduced_matches[sym2], findall(x->x==ideal_match, unreduced_matches[sym2]))
+                        delete!(matches2, ideal_match)
                     end
                 end
 
@@ -73,14 +75,9 @@ function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
 
     unreduced_matches  # but now its reduced from the while loop :)
 end
-function set_matches_unreduced(pattern::ExtensionalSet, haystack::ExtensionalSet)
-    matching_leaves = Dict{LogicalSymbol, Vector{AbstractExpression}}(sym => [] for sym ∈ variables(pattern))
-    set_matches_unreduced!(pattern, haystack; matching_leaves)
-    matching_leaves
-end
-# NOTE: This function's `matching_symbols` kwarg REQUIRES all variables(pattern) to be defined as [] initially!!!
-function set_matches_unreduced!(pattern::ExtensionalSet, haystack::ExtensionalSet; matching_leaves)
-    matching_subpatterns = Dict(sub => [] for sub ∈ elements(pattern))
+
+function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
+    matching_subpatterns = Dict(sub => Set{AbstractExpression}() for sub ∈ elements(pattern))
 
     if cardinality(pattern) != cardinality(haystack)
         return Dict()
@@ -91,13 +88,15 @@ function set_matches_unreduced!(pattern::ExtensionalSet, haystack::ExtensionalSe
     end
 
     for subpattern ∈ elements(pattern)
-        submatches = [haystack_el => set_matches_unreduced!(subpattern, haystack_el; matching_leaves) for haystack_el ∈ elements(haystack)]
+        submatches = [haystack_el => set_matches(subpattern, haystack_el) for haystack_el ∈ elements(haystack)]
         matching_elements = map(x -> x.first, filter(x -> length(x.second) > 0, submatches))
         for matching_el ∈ matching_elements
             push!(matching_subpatterns[subpattern], matching_el)
         end
     end
 
+
+    # PHYSICAL ROOT MATCHING
     # if ∅ has matches, remove ∅ from other potential matched symbols
     if haskey(matching_subpatterns, ∅) && length(matching_subpatterns[∅]) > 0
         for (subpatt, opts) ∈ matching_subpatterns
@@ -106,22 +105,31 @@ function set_matches_unreduced!(pattern::ExtensionalSet, haystack::ExtensionalSe
             end
         end
     end
+    # END PHYSICAL ROOT MATCHING
 
-    # remove the associated physical match from potential variable options
-    if any((x->(x isa ExtensionalSet)).(collect(keys(matching_subpatterns))))
-        for (subpatt, opts) ∈ matching_subpatterns
-            if subpatt isa LogicalSymbol
-                physical_matches = filter(x->(x isa ExtensionalSet), collect(keys(matching_subpatterns)))
-                deleteat!(matching_leaves[subpatt], findall(x->(x ∈ physical_matches), matching_leaves[subpatt]))
-            end
-        end
+
+    # we can perform naive simplification
+    if any(length.(collect(values(matching_subpatterns))) .== 1)
+        reduce_matches!(matching_subpatterns)
     end
-
-    @info matching_subpatterns
 
     matching_subpatterns
 end
-function set_matches_unreduced!(sym::LogicalSymbol, haystack::ExtensionalSet; matching_leaves)
-    push!(matching_leaves[sym], haystack)
-    Dict(sym => haystack)
+set_matches(sym::LogicalSymbol, haystack::ExtensionalSet) = Dict(sym => Set([haystack]))
+
+function set_symbol_matches(pattern::Union{ExtensionalSet, LogicalSymbol}, haystack::ExtensionalSet; symbol_matches=nothing)
+    if isnothing(symbol_matches)
+        symbol_matches = Dict{LogicalSymbol, Set{AbstractExpression}}(sym => Set{AbstractExpression}() for sym ∈ variables(pattern))
+    end
+
+    current_set_matches = set_matches(pattern, haystack)
+    for (expr, matches) ∈ current_set_matches
+        if expr isa LogicalSymbol
+            union!(symbol_matches[expr], Set(matches))
+        else
+            set_symbol_matches.(flat_repeat(expr, length(matches)), matches; symbol_matches)
+        end
+    end
+
+    symbol_matches
 end
