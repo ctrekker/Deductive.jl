@@ -51,7 +51,6 @@ function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
     completed_symbols = Set{LogicalSymbol}()
     while continue_running
         continue_running = false
-        @info unreduced_matches
         for (sym, matches) ∈ unreduced_matches
             if length(matches) == 1 && sym ∉ completed_symbols
                 ideal_match = first(matches)
@@ -75,29 +74,54 @@ function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
     unreduced_matches  # but now its reduced from the while loop :)
 end
 function set_matches_unreduced(pattern::ExtensionalSet, haystack::ExtensionalSet)
-    matching_symbols = Dict{LogicalSymbol, Vector{AbstractExpression}}(sym => [] for sym ∈ variables(pattern))
-    set_matches_unreduced!(pattern, haystack; matching_symbols)
-    matching_symbols
+    matching_leaves = Dict{LogicalSymbol, Vector{AbstractExpression}}(sym => [] for sym ∈ variables(pattern))
+    set_matches_unreduced!(pattern, haystack; matching_leaves)
+    matching_leaves
 end
 # NOTE: This function's `matching_symbols` kwarg REQUIRES all variables(pattern) to be defined as [] initially!!!
-function set_matches_unreduced!(pattern::ExtensionalSet, haystack::ExtensionalSet; matching_symbols)
+function set_matches_unreduced!(pattern::ExtensionalSet, haystack::ExtensionalSet; matching_leaves)
     matching_subpatterns = Dict(sub => [] for sub ∈ elements(pattern))
 
     if cardinality(pattern) != cardinality(haystack)
         return Dict()
     end
 
+    if pattern == ∅ && haystack == ∅
+        return Dict(pattern => haystack)
+    end
+
     for subpattern ∈ elements(pattern)
-        submatches = [haystack_el => set_matches_unreduced!(subpattern, haystack_el; matching_symbols) for haystack_el ∈ elements(haystack)]
+        submatches = [haystack_el => set_matches_unreduced!(subpattern, haystack_el; matching_leaves) for haystack_el ∈ elements(haystack)]
         matching_elements = map(x -> x.first, filter(x -> length(x.second) > 0, submatches))
         for matching_el ∈ matching_elements
             push!(matching_subpatterns[subpattern], matching_el)
         end
     end
 
+    # if ∅ has matches, remove ∅ from other potential matched symbols
+    if haskey(matching_subpatterns, ∅) && length(matching_subpatterns[∅]) > 0
+        for (subpatt, opts) ∈ matching_subpatterns
+            if ∅ ∈ opts && subpatt != ∅
+                deleteat!(opts, findall(x->x==∅, opts))
+            end
+        end
+    end
+
+    # remove the associated physical match from potential variable options
+    if any((x->(x isa ExtensionalSet)).(collect(keys(matching_subpatterns))))
+        for (subpatt, opts) ∈ matching_subpatterns
+            if subpatt isa LogicalSymbol
+                physical_matches = filter(x->(x isa ExtensionalSet), collect(keys(matching_subpatterns)))
+                deleteat!(matching_leaves[subpatt], findall(x->(x ∈ physical_matches), matching_leaves[subpatt]))
+            end
+        end
+    end
+
+    @info matching_subpatterns
+
     matching_subpatterns
 end
-function set_matches_unreduced!(sym::LogicalSymbol, haystack::ExtensionalSet; matching_symbols)
-    push!(matching_symbols[sym], haystack)
+function set_matches_unreduced!(sym::LogicalSymbol, haystack::ExtensionalSet; matching_leaves)
+    push!(matching_leaves[sym], haystack)
     Dict(sym => haystack)
 end
