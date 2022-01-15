@@ -79,7 +79,7 @@ The method of analytic tableaux is a complete method for proving zeroth and firs
 ```julia
 using Deductive
 
-a, b, c, d = LogicalSymbol.([:a, :b, :c, :d])
+@symbols a b c d
 
 # basic example from above
 prove(a ∧ b, ¬a)

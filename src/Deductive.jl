@@ -12,6 +12,7 @@ include("./manipulation.jl")
 include("./search.jl")
 include("./transformation_proof.jl")
 include("./inference.jl")
+include("./atomic.jl")
 
 include("./set/set.jl")
 include("./set/set_operator.jl")

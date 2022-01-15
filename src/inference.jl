@@ -8,6 +8,12 @@ export @logical_calculus, InferenceRule, PropositionalCalculus, ⊢
 Statement = AbstractExpression
 StatementSet = Set{Statement}
 
+"""
+    InferenceRule(name::String, premise::StatementSet, conclusion::Statement)
+
+Define a rule which maps a set of statements to a logical conclusion. The name is cited each time
+a rule is applied in a proof step.
+"""
 struct InferenceRule
     name::String
     premise::StatementSet
@@ -28,6 +34,11 @@ function _leaf_symbols(expr::Expr)
     Set(Iterators.flatten(_leaf_symbols.(args)))
 end
 
+"""
+Defines a logical calculus based on a set of inference rules which can be applied repeatedly to
+a given set of statements (premises). See `PropositionalCalculus` for an example definition using
+this macro.
+"""
 macro logical_calculus(var, defs)
     rules_list = defs.args[2].args
 
@@ -59,6 +70,11 @@ macro logical_calculus(var, defs)
 end
 
 
+"""
+    A ⊢ B
+
+Provability operator used exclusively in calculus definitions. A ⊢ B means that B can be proven using A as the premise.
+"""
 ⊢ = LogicalOperation((a, b) -> true, :⊢, 2, false, false)
 
 @logical_calculus PropositionalCalculus begin
@@ -141,6 +157,12 @@ end
         p ∨ r
     ), q
 end
+"""
+    PropositionalCalculus
+
+Default calculus definition for zeroth-order (propositional) logic.
+"""
+PropositionalCalculus
 
 @logical_calculus ExtendedPropositionalCalculus begin
     # Rules for negations
