@@ -18,8 +18,8 @@ Base.:(==)(es1::ExtensionalSet, es2::ExtensionalSet) = elements(es1) == elements
 cardinality(es::ExtensionalSet) = length(es)
 
 # expression methods
-variables(::ExtensionalSet) = Set{LogicalSymbol}()
-operations(::ExtensionalSet) = Set{LogicalOperation}()
+variables(es::ExtensionalSet) = reduce(∪, variables.(elements(es)))
+operations(es::ExtensionalSet) = reduce(∪, operations.(elements(es)))
 
 function Base.show(io::IO, es::ExtensionalSet)
     if isempty(es)

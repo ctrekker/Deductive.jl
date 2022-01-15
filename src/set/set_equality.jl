@@ -1,3 +1,5 @@
+export classify_matches, set_matches
+
 # set equality is checked using a linear time tree isomorphism algorithm
 #  https://logic.pdmi.ras.ru/~smal/files/smal_jass08.pdf
 
@@ -22,9 +24,80 @@ end
 
 
 # SET MATCHING
-function set_matching(pattern::ExtensionalSet, haystack::ExtensionalSet)
-    
+@enum MatchClassification EXACT_MATCH PARTIAL_MATCH NO_MATCHES
+function classify_matches(matches::Dict{LogicalSymbol, Vector{AbstractExpression}})
+    match_lengths = length.(collect(values(matches)))
+    if any(match_lengths .== 0)
+        return NO_MATCHES
+    end
+    if all(match_lengths .== 1)
+        return EXACT_MATCH
+    end
+    return PARTIAL_MATCH
 end
-function set_matching(sym::LogicalSymbol, haystack::ExtensionalSet)
-    
+function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
+    unreduced_matches = set_matches_unreduced(pattern, haystack)
+
+    # TODO: consider this scenario:
+    # a = [1, 2]
+    # b = [1, 2]
+    # c = [1, 2, 3]
+    # We cannot make any conclusions about a or b, but we _can_ conclude that c must not be either 1 or 2, considering
+    # if it was the problem would become unsatisfiable between a and b. This kind of higher-order logical resolution
+    # probably will require a neat algorithm of its own, which constitutes this problem as another issue (#21).
+
+    continue_running = true
+
+    completed_symbols = Set{LogicalSymbol}()
+    while continue_running
+        continue_running = false
+        @info unreduced_matches
+        for (sym, matches) ∈ unreduced_matches
+            if length(matches) == 1 && sym ∉ completed_symbols
+                ideal_match = first(matches)
+                push!(completed_symbols, sym)
+                # this could be simplified with a "graph inversion" but usually dictionary sizes are low so this doesn't cost too much
+                # NOTE TO FUTURE ME: graph inversion might also be a clever way to solve #21 as well...
+                for (sym2, matches2) ∈ unreduced_matches
+                    if sym == sym2
+                        continue
+                    end
+                    if ideal_match ∈ matches2
+                        deleteat!(unreduced_matches[sym2], findall(x->x==ideal_match, unreduced_matches[sym2]))
+                    end
+                end
+
+                continue_running = true
+            end
+        end
+    end
+
+    unreduced_matches  # but now its reduced from the while loop :)
+end
+function set_matches_unreduced(pattern::ExtensionalSet, haystack::ExtensionalSet)
+    matching_symbols = Dict{LogicalSymbol, Vector{AbstractExpression}}(sym => [] for sym ∈ variables(pattern))
+    set_matches_unreduced!(pattern, haystack; matching_symbols)
+    matching_symbols
+end
+# NOTE: This function's `matching_symbols` kwarg REQUIRES all variables(pattern) to be defined as [] initially!!!
+function set_matches_unreduced!(pattern::ExtensionalSet, haystack::ExtensionalSet; matching_symbols)
+    matching_subpatterns = Dict(sub => [] for sub ∈ elements(pattern))
+
+    if cardinality(pattern) != cardinality(haystack)
+        return Dict()
+    end
+
+    for subpattern ∈ elements(pattern)
+        submatches = [haystack_el => set_matches_unreduced!(subpattern, haystack_el; matching_symbols) for haystack_el ∈ elements(haystack)]
+        matching_elements = map(x -> x.first, filter(x -> length(x.second) > 0, submatches))
+        for matching_el ∈ matching_elements
+            push!(matching_subpatterns[subpattern], matching_el)
+        end
+    end
+
+    matching_subpatterns
+end
+function set_matches_unreduced!(sym::LogicalSymbol, haystack::ExtensionalSet; matching_symbols)
+    push!(matching_symbols[sym], haystack)
+    Dict(sym => haystack)
 end
