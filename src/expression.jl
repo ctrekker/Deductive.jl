@@ -94,6 +94,7 @@ struct LogicalOperation
     commutative::Bool
 end
 LogicalOperation(bool_fn::Function, name::Symbol, argument_count::Int) = LogicalOperation(bool_fn, name, argument_count, false, false)
+name(op::LogicalOperation) = op.name
 """
     argument_count(op::LogicalOperation)
 

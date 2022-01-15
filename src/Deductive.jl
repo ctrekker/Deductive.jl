@@ -20,6 +20,8 @@ include("./set/set_proof.jl")
 include("./set/special_definitions.jl")
 include("./set/set_equality.jl")
 
+include("./latex.jl")
+
 
 # function FreeVariable(sym::Symbol, metadata::Symbol)
 #     Sym{Any, Symbol}(sym, metadata)
