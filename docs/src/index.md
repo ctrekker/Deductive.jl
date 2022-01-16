@@ -16,3 +16,4 @@ pkg> add Deductive
 ## Basic Usage
 
 The best way to get accustomed to the syntax of Deductive is to start with [Propositional Logic](@ref).
+ 
