@@ -27,9 +27,7 @@ function constrained_output_elimination!(f_map::Dict{A, Set{B}}) where {A, B}
 					sort!(f_pairs; by=mapped_length)
 				end
 			end
-		elseif length(fully_connected) > mapped_length(f_pair)
-			@warn "Contradiction in mapping. Ignoring..."
-		end
+        end
 
 		i += 1
 	end
