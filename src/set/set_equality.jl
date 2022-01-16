@@ -76,7 +76,7 @@ function reduce_matches!(unreduced_matches::Dict)
     unreduced_matches  # but now its reduced from the while loop :)
 end
 
-function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
+function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet; reduce=true)
     matching_subpatterns = Dict(sub => Set{AbstractExpression}() for sub ∈ elements(pattern))
 
     if cardinality(pattern) != cardinality(haystack)
@@ -112,23 +112,31 @@ function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet)
     if any(length.(collect(values(matching_subpatterns))) .== 1)
         reduce_matches!(matching_subpatterns)
     end
+    
+    if reduce
+        constrained_output_elimination!(matching_subpatterns)
+    end
 
     matching_subpatterns
 end
-set_matches(sym::LogicalSymbol, haystack::ExtensionalSet) = Dict(sym => Set([haystack]))
+set_matches(sym::LogicalSymbol, haystack::ExtensionalSet; reduce=false) = Dict(sym => Set([haystack]))
 
-function set_symbol_matches(pattern::Union{ExtensionalSet, LogicalSymbol}, haystack::ExtensionalSet; symbol_matches=nothing)
+function set_symbol_matches(pattern::Union{ExtensionalSet, LogicalSymbol}, haystack::ExtensionalSet; symbol_matches=nothing, reduce=true)
     if isnothing(symbol_matches)
         symbol_matches = Dict{LogicalSymbol, Set{AbstractExpression}}(sym => Set{AbstractExpression}() for sym ∈ variables(pattern))
     end
 
-    current_set_matches = set_matches(pattern, haystack)
+    current_set_matches = set_matches(pattern, haystack; reduce=false)
     for (expr, matches) ∈ current_set_matches
         if expr isa LogicalSymbol
             union!(symbol_matches[expr], Set(matches))
         else
-            set_symbol_matches.(flat_repeat(expr, length(matches)), matches; symbol_matches)
+            set_symbol_matches.(flat_repeat(expr, length(matches)), matches; symbol_matches, reduce=false)
         end
+    end
+
+    if reduce
+        constrained_output_elimination!(symbol_matches)
     end
 
     symbol_matches
