@@ -1,7 +1,7 @@
 export ¬, ∧, ∨, →, ⟷
 export LogicalSymbol, istree, isnode, name, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
 export isunary, isbinary, argument_count
-export @symbols
+export @symbols, @unique_symbols
 
 
 abstract type AbstractExpression end
@@ -62,6 +62,24 @@ macro symbols(syms...)
 end
 
 
+_unique_index = 1
+macro unique_symbols(syms...)
+    global _unique_index
+
+    unique_names = [Symbol("u" * subscript_number(_unique_index + i)) for i ∈ 0:(length(syms) - 1)]
+    definitions = [:(
+        $(esc(sym)) = LogicalSymbol($(esc(Symbol))($(string(unique_name))))
+    ) for (sym, unique_name) ∈ zip(syms, unique_names)]
+
+    _unique_index += length(syms)
+
+    quote
+        $(definitions...)
+        nothing
+    end
+end
+
+
 """
     LogicalOperation(bool_fn::Function, name::Symbol, argument_count::Int, associative::Bool, commutative::Bool)
 
@@ -75,6 +93,8 @@ struct LogicalOperation
     associative::Bool
     commutative::Bool
 end
+LogicalOperation(bool_fn::Function, name::Symbol, argument_count::Int) = LogicalOperation(bool_fn, name, argument_count, false, false)
+name(op::LogicalOperation) = op.name
 """
     argument_count(op::LogicalOperation)
 

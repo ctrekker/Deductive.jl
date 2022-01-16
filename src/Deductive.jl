@@ -14,6 +14,14 @@ include("./transformation_proof.jl")
 include("./inference.jl")
 include("./atomic.jl")
 
+include("./set/set.jl")
+include("./set/set_operator.jl")
+include("./set/set_proof.jl")
+include("./set/special_definitions.jl")
+include("./set/set_equality.jl")
+
+include("./latex.jl")
+
 
 # function FreeVariable(sym::Symbol, metadata::Symbol)
 #     Sym{Any, Symbol}(sym, metadata)
