@@ -1,4 +1,4 @@
-name: "Deductive Unit Tests"
+name: "Deductive Tests"
 
 on:
   workflow_dispatch:
