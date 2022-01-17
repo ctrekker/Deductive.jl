@@ -1,4 +1,4 @@
-export @logical_calculus, InferenceRule, PropositionalCalculus, ⊢
+export @logical_calculus, InferenceRule, name, premise, conclusion, PropositionalCalculus, ⊢
 
 # TODO: implement set theoretic abstractions so a proper representation of the "universe of discourse" can be explicitly
 #       defined in certain rules of inference (like the Principle of Explosion)
@@ -19,6 +19,9 @@ struct InferenceRule
     premise::StatementSet
     conclusion::Statement
 end
+name(ir::InferenceRule) = ir.name
+premises(ir::InferenceRule) = ir.premise
+conclusion(ir::InferenceRule) = ir.conclusion
 
 InferenceRule(name::String, premise::Tuple{Vararg{T} where T}, conclusion::Statement) = InferenceRule(name, StatementSet(premise), conclusion)
 InferenceRule(name::String, premise::T, conclusion::Statement) where {T <: Statement} = InferenceRule(name, (premise,), conclusion)
