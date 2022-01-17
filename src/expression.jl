@@ -4,6 +4,11 @@ export isunary, isbinary, argument_count
 export @symbols, @unique_symbols
 
 
+"""
+    AbstractExpression
+
+The abstract type which all expression trees are built from.
+"""
 abstract type AbstractExpression end
 
 """
@@ -40,7 +45,7 @@ Base.deepcopy(sym::LogicalSymbol) = LogicalSymbol(name(sym), deepcopy(metadata(s
 
 # convenience macros
 """
-Define any number of `LogicalSymbols` with the names provided.
+Define any number of [`LogicalSymbols`](@ref Deductive.LogicalSymbol) with the names provided.
 
 # Examples
 ```julia-repl

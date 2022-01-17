@@ -7,6 +7,7 @@ export Ē, Ā
 
 
 include("./utils.jl")
+include("./common_algorithms.jl")
 include("./expression.jl")
 include("./manipulation.jl")
 include("./search.jl")

@@ -1,6 +1,12 @@
 # Deductive.jl
 
-Simple package for expressing and proving [zeroth order](https://en.wikipedia.org/wiki/Propositional_calculus) and [first order](https://en.wikipedia.org/wiki/First-order_logic) logical statements and theorems symbolically in Julia
+[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://ctrekker.github.io/Deductive.jl/dev/)
+[![Build Status](https://github.com/ctrekker/Deductive.jl/actions/workflows/Test.yml/badge.svg)](https://github.com/ctrekker/Deductive.jl/actions/workflows/Test.yml?query=branch%3Amain)
+[![Coverage Status](https://coveralls.io/repos/github/ctrekker/Deductive.jl/badge.svg?branch=main)](https://coveralls.io/github/ctrekker/Deductive.jl?branch=main)
+
+<img src="assets/logo.png" width="250"/>
+
+Deductive is a package for expressing and proving [zeroth order](https://en.wikipedia.org/wiki/Propositional_calculus) and [first order](https://en.wikipedia.org/wiki/First-order_logic) logical statements and theorems symbolically in Julia.
 
 ## Installation
 
