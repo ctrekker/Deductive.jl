@@ -76,10 +76,19 @@ function reduce_matches!(unreduced_matches::Dict)
     unreduced_matches  # but now its reduced from the while loop :)
 end
 
-function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet; reduce=true)
+# TODO: Move these elsewhere or switch fully to ExtensionalSet from Set
+ES = Union{ExtensionalSet, Set}
+elements(s::Set) = s
+cardinality(s::Set) = length(s)
+variables(s::Set) = cardinality(s) > 0 ? reduce(∪, variables.(collect(s))) : Set{LogicalSymbol}()
+
+# TODO: fix the method signatures to be less messy
+#  1. Reverse pattern and haystack to match up with other matching algorithm signatures
+#  2. Make sure type specificity is as tight as possible to prevent contradictory type combinations from being valid inputs
+function set_matches(pattern::ES, haystack::ES; reduce=true, strict=true)
     matching_subpatterns = Dict(sub => Set{AbstractExpression}() for sub ∈ elements(pattern))
 
-    if cardinality(pattern) != cardinality(haystack)
+    if strict && cardinality(pattern) != cardinality(haystack)
         return Dict()
     end
 
@@ -119,9 +128,17 @@ function set_matches(pattern::ExtensionalSet, haystack::ExtensionalSet; reduce=t
 
     matching_subpatterns
 end
-set_matches(sym::LogicalSymbol, haystack::ExtensionalSet; reduce=false) = Dict(sym => Set([haystack]))
+set_matches(sym::LogicalSymbol, haystack::Union{ES, AbstractExpression}; reduce=false) = Dict(sym => Set([haystack]))
+# TODO: think about generalizing set_matches such that it integrates with `find_matches` since they fundamentally do something similar
+function set_matches(pattern::LogicalExpression, haystack::AbstractExpression)
+    expr_matches = Dict{LogicalSymbol, AbstractExpression}()
+    if find_matches!(haystack, pattern, expr_matches)
+        return Dict(k => Set([v]) for (k, v) ∈ expr_matches)
+    end
+    Dict()
+end
 
-function set_symbol_matches(pattern::Union{ExtensionalSet, LogicalSymbol}, haystack::ExtensionalSet; symbol_matches=nothing, reduce=true)
+function set_symbol_matches(pattern::Union{ES, LogicalSymbol}, haystack::ES; symbol_matches=nothing, reduce=true, strict=true)
     if isnothing(symbol_matches)
         symbol_matches = Dict{LogicalSymbol, Set{AbstractExpression}}(sym => Set{AbstractExpression}() for sym ∈ variables(pattern))
     end
@@ -131,7 +148,7 @@ function set_symbol_matches(pattern::Union{ExtensionalSet, LogicalSymbol}, hayst
         if expr isa LogicalSymbol
             union!(symbol_matches[expr], Set(matches))
         else
-            set_symbol_matches.(flat_repeat(expr, length(matches)), matches; symbol_matches, reduce=false)
+            set_symbol_matches.(flat_repeat(expr, length(matches)), matches; symbol_matches, reduce=false, strict=strict)
         end
     end
 
@@ -140,4 +157,10 @@ function set_symbol_matches(pattern::Union{ExtensionalSet, LogicalSymbol}, hayst
     end
 
     symbol_matches
+end
+function set_symbol_matches(pattern::LogicalExpression, haystack::AbstractExpression; symbol_matches=nothing, kwargs...)
+    my_matches = set_matches(pattern, haystack)
+    for (sym, matches) ∈ my_matches
+        union!(symbol_matches[sym], matches)
+    end
 end

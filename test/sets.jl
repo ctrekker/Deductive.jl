@@ -32,4 +32,14 @@
         @test length(m2B[x]) == 2
         @test length(m2B[y]) == 2
     end
+
+    @testset "Mixed Set Matching" begin
+        # distinguished from test cases above by the mixing of set logic and logical expressions
+        #   ends up being used in proof algorithms
+        @symbols a b c x y z
+        pattern = Set([x, x → y])  # modus ponens without the conclusion :)
+        premises1 = Set([a, a → b])
+
+        @test set_matches(pattern, premises1; strict=false)
+    end
 end

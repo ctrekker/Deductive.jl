@@ -8,6 +8,14 @@
 export GivenGoal, given, goal
 
 
+"""
+    GivenGoal(given::Set{AbstractExpression}, goal::Set{AbstractExpression})
+
+Initialize a structure representing a proof starting and ending point, with given and goal sets of expressions respectively. This
+structure on its own isn't enough to conduct a proof, however. A proof requires both a `GivenGoal` and a logical calculus which
+defines the allowed elementary operations on expressions. For example, if operating within propositional logic, see the 
+PropositionalCalculus definition.
+"""
 struct GivenGoal
     given::Set{AbstractExpression}
     goal::Set{AbstractExpression}
@@ -32,9 +40,14 @@ function find_matches(gg::GivenGoal, rule::InferenceRule)
     matching_statements
 end
 
+"""
+    prove(gg::GivenGoal; calculus=PropositionalCalculus)
+
+Prove a given-goal table using the specified logical calculus, which by default is [PropositionalCalculus](@ref).
+"""
 function prove(gg::GivenGoal; calculus=PropositionalCalculus)
     # naive iteration
     for rule ∈ calculus
-        println(find_matches(gg, rule))
+        println(premises(rule) => conclusion(rule))
     end
 end

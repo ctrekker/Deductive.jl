@@ -1,4 +1,4 @@
-export @logical_calculus, InferenceRule, name, premise, conclusion, PropositionalCalculus, ⊢
+export @logical_calculus, InferenceRule, name, premises, conclusion, rule_by_name, PropositionalCalculus, ⊢
 
 # TODO: implement set theoretic abstractions so a proper representation of the "universe of discourse" can be explicitly
 #       defined in certain rules of inference (like the Principle of Explosion)
@@ -25,6 +25,20 @@ conclusion(ir::InferenceRule) = ir.conclusion
 
 InferenceRule(name::String, premise::Tuple{Vararg{T} where T}, conclusion::Statement) = InferenceRule(name, StatementSet(premise), conclusion)
 InferenceRule(name::String, premise::T, conclusion::Statement) where {T <: Statement} = InferenceRule(name, (premise,), conclusion)
+
+
+"""
+    rule_by_name(calculus::Set{InferenceRule}, name::String)
+
+Searches for an inference rule in a logical calculus based upon a given name.
+
+## Examples
+```julia
+rule_by_name(PropositionalCalculus, "Modus Ponens")
+rule_by_name(PropositionalCalculus, "Double Negation Introduction")
+```
+"""
+rule_by_name(calculus::Set{InferenceRule}, rule_name::String) = collect(calculus)[findfirst(x->name(x)==rule_name, collect(calculus))]
 
 
 _leaf_symbols(::Symbol) = Set{Symbol}()
