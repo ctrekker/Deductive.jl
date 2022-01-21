@@ -10,6 +10,7 @@ makedocs(
         "Propositional Logic" => "propositional_logic.md",
         "Internals" => [
             "Expressions" => "internals/expressions.md",
+            "Proof Utilities" => "internals/proof_utilities.md",
             "Assertion Proofs" => "internals/assertion_proofs.md",
         ]
     ]
