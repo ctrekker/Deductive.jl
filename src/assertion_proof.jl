@@ -24,13 +24,13 @@ GivenGoal(given::Vector{T}, goal::Vector{U}) where {T <: AbstractExpression, U <
 """
     given(gg::GivenGoal)
 
-Returns the `given` part of a [GivenGoal](@ref)
+Returns the `given` part of a [`GivenGoal`](@ref)
 """
 given(gg::GivenGoal) = gg.given
 """
     goal(gg::GivenGoal)
 
-Returns the `goal` part of a [GivenGoal](@ref)
+Returns the `goal` part of a [`GivenGoal`](@ref)
 """
 goal(gg::GivenGoal) = gg.goal
 
@@ -51,12 +51,28 @@ function find_matches(gg::GivenGoal, rule::InferenceRule)
 end
 
 
+"""
+    SymbolMap
+
+A custom type alias for `Dict{LogicalSymbol, AbstractExpression}` to make method signatures less chaotic.
+"""
 SymbolMap = Dict{LogicalSymbol, AbstractExpression}
-function is_partner(sym_map::SymbolMap, compare_sym_map::SymbolMap)
+"""
+    is_partner_map(sym_map::SymbolMap, compare_sym_map::SymbolMap)
+    
+Checks whether `sym_map` and `compare_sym_map` are "partner maps". Two symbol maps are partners if they do not
+form any contradictions between their intersection.
+"""
+function is_partner_map(sym_map::SymbolMap, compare_sym_map::SymbolMap)
     all([!haskey(compare_sym_map, sym) || compare_sym_map[sym] == mapped for (sym, mapped) ∈ sym_map])
 end
-function has_partner(sym_map::SymbolMap, compare_sym_map_set::Set{SymbolMap})
-    any([is_partner(sym_map, compare_sym_map) for compare_sym_map ∈ compare_sym_map_set])
+"""
+    has_partner_map(sym_map::SymbolMap, compare_sym_map_set::Set{SymbolMap})
+
+Checks whether `sym_map` has a single partner in the set `compare_sym_map_set`.
+"""
+function has_partner_map(sym_map::SymbolMap, compare_sym_map_set::Set{SymbolMap})
+    any([is_partner_map(sym_map, compare_sym_map) for compare_sym_map ∈ compare_sym_map_set])
 end
 
 
@@ -65,8 +81,8 @@ end
 
 Computes a vector of matches in which each element is a valid set of possible symbol values, with the catch being that
 any two sets drawn from different elements of the output vector may or may not be compatible. It is not recommended that
-this function be used externally. Instead, see [rule_combinations](@ref), which outputs a more usable form of rule match,
-which instead enumerates over all possible matches. Although informationally identical, [rule_combinations](@ref) is
+this function be used externally. Instead, see [`rule_combinations`](@ref), which outputs a more usable form of rule match,
+which instead enumerates over all possible matches. Although informationally identical, [`rule_combinations`](@ref) is
 usually preferable due to its linearly iterable ouptut.
 """
 function rule_matches(ir::InferenceRule, haystack::Set{T}) where {T <: AbstractExpression}
@@ -86,7 +102,7 @@ function rule_matches(ir::InferenceRule, haystack::Set{T}) where {T <: AbstractE
         begin
             symbol_maps_without_current = filter(x->x!=symbol_map_set, symbol_maps)
             filter(symbol_map_set) do symbol_map
-                all([has_partner(symbol_map, compare_symbol_map_set) for compare_symbol_map_set ∈ symbol_maps_without_current])
+                all([has_partner_map(symbol_map, compare_symbol_map_set) for compare_symbol_map_set ∈ symbol_maps_without_current])
             end
         end
         for symbol_map_set ∈ symbol_maps
@@ -111,7 +127,7 @@ function rule_combinations(rule_variables::Set{LogicalSymbol}, reduced_symbol_ma
     for symbol_map ∈ symbol_maps
         if length(keys(symbol_map)) == length(rule_variables)
             push!(combinations, symbol_map)
-        elseif is_partner(symbol_map, current_symbol_map)
+        elseif is_partner_map(symbol_map, current_symbol_map)
             rc = rule_combinations(rule_variables, reduced_symbol_maps[2:end], merge(symbol_map, current_symbol_map))
             union!(combinations, rc)
         end

@@ -1,5 +1,9 @@
 # Deductive
 
+```@meta
+CurrentModule = Deductive
+```
+
 Welcome to the Deductive Documentation!
 
 !!! note
