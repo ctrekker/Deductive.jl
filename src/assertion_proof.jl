@@ -179,6 +179,7 @@ Set with 3 elements:
   Dict(p => a ∧ b)
   Dict(p => a)
   Dict(p => b)
+=#
 ```
 """
 function rule_combinations(ir::InferenceRule, haystack::Set{T}) where {T <: AbstractExpression}
