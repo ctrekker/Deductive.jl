@@ -21,7 +21,17 @@ struct GivenGoal
     goal::Set{AbstractExpression}
 end
 GivenGoal(given::Vector{T}, goal::Vector{U}) where {T <: AbstractExpression, U <: AbstractExpression} = GivenGoal(Set(Vector{AbstractExpression}(given)), Set(Vector{AbstractExpression}(goal)))
+"""
+    given(gg::GivenGoal)
+
+Returns the `given` part of a [GivenGoal](@ref)
+"""
 given(gg::GivenGoal) = gg.given
+"""
+    goal(gg::GivenGoal)
+
+Returns the `goal` part of a [GivenGoal](@ref)
+"""
 goal(gg::GivenGoal) = gg.goal
 
 function find_matches(gg::GivenGoal, rule::InferenceRule)

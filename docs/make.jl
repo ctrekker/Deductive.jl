@@ -1,4 +1,4 @@
-push!(LOAD_PATH,"../src/")
+push!(LOAD_PATH, "../src/")
 
 using Documenter, Deductive
 
@@ -10,6 +10,7 @@ makedocs(
         "Propositional Logic" => "propositional_logic.md",
         "Internals" => [
             "Expressions" => "internals/expressions.md",
+            "Assertion Proofs" => "internals/assertion_proofs.md",
         ]
     ]
 )
