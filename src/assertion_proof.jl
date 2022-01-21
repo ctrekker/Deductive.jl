@@ -21,6 +21,22 @@ struct GivenGoal
     goal::Set{AbstractExpression}
 end
 GivenGoal(given::Vector{T}, goal::Vector{U}) where {T <: AbstractExpression, U <: AbstractExpression} = GivenGoal(Set(Vector{AbstractExpression}(given)), Set(Vector{AbstractExpression}(goal)))
+function Base.show(io::IO, gg::GivenGoal)
+    table = DataFrame("Given" => Union{AbstractExpression, Empty}[], "Goal" => Union{AbstractExpression, Empty}[])
+    
+    _given = collect(given(gg))
+    _goal = collect(goal(gg))
+
+    e = Empty()
+    for i ∈ 1:max(length(_given), length(_goal))
+        push!(table, Dict(
+            "Given" => i > length(_given) ? e : _given[i],
+            "Goal" => i > length(_goal) ? e : _goal[i]
+        ))
+    end
+
+    pretty_table(io, table; display_size=(-1, -1), nosubheader=true)
+end
 """
     given(gg::GivenGoal)
 

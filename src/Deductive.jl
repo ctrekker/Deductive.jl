@@ -11,6 +11,7 @@ include("./common_algorithms.jl")
 include("./expression.jl")
 include("./manipulation.jl")
 include("./search.jl")
+include("./proof_utilities.jl")
 include("./inference_rules.jl")
 include("./transformation_proof.jl")
 include("./assertion_proof.jl")
@@ -104,62 +105,6 @@ function truthtable(st::AbstractExpression)
     end
 
     table
-end
-
-
-# proof utilities
-struct ProofLine
-    linenum::Int
-    statement::AbstractExpression
-    argument::String
-    references::Vector{ProofLine}
-end
-function ProofLine(line::Int, statement::AbstractExpression, argument::String="N/A")
-    ProofLine(line, statement, argument, ProofLine[])
-end
-function ProofLine(line::Int, statement::AbstractExpression, argument::String, reference::ProofLine)
-    ProofLine(line, statement, argument, [reference])
-end
-# in most cases this shouldn't get shown since we also override Base.show(::IO, ::Vector{ProofLine})
-# put another way, this is the best we can print out a proof line without context from the proof itself
-function Base.show(io::IO, line::ProofLine)
-    print(io, line.linenum)
-    print(io, "\t")
-    print(io, replace(string(line.statement), "Deductive." => ""))
-    print(io, "\t")
-    print(io, line.argument)
-    
-    if length(line.references) > 0
-        print(io, "\t")
-        print(io, "(" * join([string(ref.linenum) for ref ∈ line.references], ", ") * ")")
-    end
-end
-
-function find_proof_line_by_statement(proof::Vector{ProofLine}, statement::AbstractExpression)
-    for line ∈ proof
-        if isequal(line.statement, statement)
-            return line
-        end
-    end
-
-    nothing
-end
-
-
-function Base.show(io::IO, m::MIME"text/plain", proof::Vector{ProofLine})
-    proof_table = DataFrame("Line Number" => Int[], "Statement" => String[], "Argument" => String[], "References" => String[])
-
-    for line ∈ proof
-        push!(proof_table, Dict(
-            "Line Number" => line.linenum,
-            "Statement" => replace(string(line.statement), "Deductive." => ""),
-            "Argument" => line.argument,
-            "References" => join([string(ref.linenum) for ref ∈ line.references], ", ")
-        ))
-    end
-
-    # display_size=(-1, -1) forces pretty_table to print all rows and columns regardless of screen size
-    pretty_table(io, proof_table; display_size=(-1, -1))
 end
 
 

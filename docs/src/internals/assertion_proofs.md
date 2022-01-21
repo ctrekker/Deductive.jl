@@ -1,6 +1,6 @@
 # Assertion Proofs
 
-Assertion proofs are a kind of proof structured in a manner where one starts with a set of statements they would like to prove in terms of another set of statements. Deductive makes this distinction so that a given-goal structure can be defined which describes such a system. 
+Assertion proofs are a kind of proof structured in a manner where one starts with a set of statements they would like to prove in terms of another set of statements. Deductive makes this distinction so that a given-goal structure can be defined which describes such a system.
 
 ## Given Goal Proofs
 

@@ -44,3 +44,7 @@ function Base.setindex!(fv::FakeVector{X, T}, val, inds...) where {X, T}
     end
     setvectorindex!(fv.creator, fv.fieldname, val, first(inds))
 end
+
+
+struct Empty end
+Base.show(::IO, ::Empty) = nothing
