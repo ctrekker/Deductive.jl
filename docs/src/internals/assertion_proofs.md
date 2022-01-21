@@ -19,6 +19,6 @@ The given-goal proof definition requires one to apply inference rules repeatedly
 ```@docs
 rule_matches
 rule_combinations
-is_partner_map
-has_partner_map
+Deductive.is_partner_map
+Deductive.has_partner_map
 ```
