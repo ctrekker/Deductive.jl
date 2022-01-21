@@ -30,6 +30,68 @@ end
     @test !tableau(a → b, b → c, c → d, a, ¬d)
 end
 
+@testset "Assertion Proofs" begin
+    @testset "Rule Combinations" begin
+        @symbols a b c d
+        @symbols p q
+
+        conjunction = rule_by_name(PropositionalCalculus, "Conjunction")
+        premises1 = Set{AbstractExpression}([a, b])
+        premises2 = Set{AbstractExpression}([a, b, c])
+        premises3 = Set{AbstractExpression}([a, b, c, d])
+        
+        @test rule_combinations(conjunction, premises1) == Set([
+            Deductive.SymbolMap(p => a, q => a),
+            Deductive.SymbolMap(p => a, q => b),
+            Deductive.SymbolMap(p => b, q => a),
+            Deductive.SymbolMap(p => b, q => b),
+        ])
+        @test rule_combinations(conjunction, premises2) == Set([
+            Deductive.SymbolMap(p => a, q => a),
+            Deductive.SymbolMap(p => a, q => b),
+            Deductive.SymbolMap(p => a, q => c),
+            Deductive.SymbolMap(p => b, q => a),
+            Deductive.SymbolMap(p => b, q => b),
+            Deductive.SymbolMap(p => b, q => c),
+            Deductive.SymbolMap(p => c, q => a),
+            Deductive.SymbolMap(p => c, q => b),
+            Deductive.SymbolMap(p => c, q => c)
+        ])
+        @test length(rule_combinations(conjunction, premises3)) == 16
+        #  lol did u really think I'd write out all 16 combinations 🤣🤣🤣
+
+        modus_ponens = rule_by_name(PropositionalCalculus, "Modus Ponens")
+        premises4 = Set{AbstractExpression}([
+            a → b,
+            a
+        ])
+        premises5 = Set{AbstractExpression}([
+            a → b,
+            (a → b) → c
+        ])
+
+        @test rule_combinations(modus_ponens, premises4) == Set([
+            Deductive.SymbolMap(p => a, q => b)
+        ])
+        @test rule_combinations(modus_ponens, premises5) == Set([
+            Deductive.SymbolMap(p => a → b, q => c)
+        ])
+
+        double_negation = rule_by_name(PropositionalCalculus, "Double Negation Introduction")
+        premises6 = Set{AbstractExpression}([
+            a,
+            b,
+            a ∧ b
+        ])
+
+        @test rule_combinations(double_negation, premises6) == Set([
+            Deductive.SymbolMap(p => a),
+            Deductive.SymbolMap(p => b),
+            Deductive.SymbolMap(p => a ∧ b)
+        ])
+    end
+end
+
 # @testset "Predicate Proofs" begin
 #     a, b = LogicalSymbol.([:a, :b])
 #     x, y, z = FreeVariable.([:x, :y, :z])

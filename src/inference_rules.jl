@@ -90,7 +90,7 @@ end
 """
     A ⊢ B
 
-Provability operator used exclusively in calculus definitions. A ⊢ B means that B can be proven using A as the premise.
+Provability operator used exclusively in calculus definitions. A ⊢ B means that B can be proven using A as the premise. Typed with \\vdash.
 """
 ⊢ = LogicalOperation((a, b) -> true, :⊢, 2, false, false)
 

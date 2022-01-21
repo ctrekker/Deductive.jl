@@ -38,8 +38,9 @@
         #   ends up being used in proof algorithms
         @symbols a b c x y z
         pattern = Set([x, x → y])  # modus ponens without the conclusion :)
-        premises1 = Set([a, a → b])
+        # premises1 = Set([a, a → b])
 
-        @test set_matches(pattern, premises1; strict=false)
+        # @test set_matches(pattern, premises1; strict=false)
+        # TODO: actually write these tests lol
     end
 end

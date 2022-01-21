@@ -1,5 +1,5 @@
 export ¬, ∧, ∨, →, ⟷
-export LogicalSymbol, istree, isnode, name, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
+export AbstractExpression, LogicalSymbol, istree, isnode, name, metadata, variables, operation, operations, arguments, parents, left, right, isassociative, iscommutative
 export isunary, isbinary, argument_count
 export @symbols, @unique_symbols
 
