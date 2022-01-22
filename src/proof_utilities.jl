@@ -8,7 +8,7 @@ struct ProofLine{A}
     linenum::Int
     statement::AbstractExpression
     argument::A
-    references::Vector{ProofLine}
+    references::Vector{ProofLine{A}}
 end
 """
     ProofLine(line::Int, statement::AbstractExpression, argument::A="N/A") where {A}
@@ -17,14 +17,14 @@ Creates a [`ProofLine`](@ref) without any references to other lines and without 
 this line depends only on the previous one, but can also be taken to mean "is a conclusion of all statements above".
 """
 function ProofLine(line::Int, statement::AbstractExpression, argument::A="N/A") where {A}
-    ProofLine(line, statement, argument, ProofLine[])
+    ProofLine(line, statement, argument, ProofLine{A}[])
 end
 """
     ProofLine(line::Int, statement::AbstractExpression, argument::A, reference::ProofLine) where {A}
 
 Convenience method. Creates a [`ProofLine`](@ref) with a single provided reference instead of a list of them.
 """
-function ProofLine(line::Int, statement::AbstractExpression, argument::A, reference::ProofLine) where {A}
+function ProofLine(line::Int, statement::AbstractExpression, argument::A, reference::ProofLine{A}) where {A}
     ProofLine(line, statement, argument, [reference])
 end
 # in most cases this shouldn't get shown since we also override Base.show(::IO, ::Vector{ProofLine})

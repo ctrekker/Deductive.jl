@@ -207,9 +207,27 @@ end
 
 Prove a given-goal table using the specified logical calculus, which by default is [PropositionalCalculus](@ref).
 """
-function prove(gg::GivenGoal; calculus=PropositionalCalculus)
+function prove(gg::GivenGoal; kwargs...)
+    prove_method1(gg; kwargs...)
+end
+
+# this method involves keeping a set of all applied rules and checking rule_combinations on it
+#   conclusion: it blows up WAY too quickly; this is most certainly hyperexponential wrt. max_depth
+function prove_method1(gg; calculus=PropositionalCalculus, max_depth=10)
     # naive iteration
-    for rule ∈ calculus
-        println(premises(rule) => conclusion(rule))
+    consequences = copy(given(gg))
+
+    for depth ∈ 1:max_depth
+        for rule ∈ calculus
+            combinations = rule_combinations(rule, consequences)
+            if length(combinations) > 0
+                union!(consequences, [
+                    substitute(conclusion(rule), sym_map)
+                    for sym_map ∈ combinations
+                ])
+            end
+        end
     end
+
+    consequences
 end
