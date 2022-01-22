@@ -12,6 +12,7 @@ makedocs(
             "Expressions" => "internals/expressions.md",
             "Proof Utilities" => "internals/proof_utilities.md",
             "Assertion Proofs" => "internals/assertion_proofs.md",
+            "Indexes" => "internals/indexes.md"
         ]
     ]
 )
