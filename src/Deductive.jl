@@ -11,6 +11,10 @@ include("./common_algorithms.jl")
 include("./expression.jl")
 include("./manipulation.jl")
 include("./search.jl")
+
+include("./db/index.jl")
+include("./db/expressions_index.jl")
+
 include("./proof_utilities.jl")
 include("./inference_rules.jl")
 include("./transformation_proof.jl")
