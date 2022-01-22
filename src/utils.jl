@@ -48,14 +48,3 @@ end
 
 struct Empty end
 Base.show(::IO, ::Empty) = nothing
-
-
-
-function random_expression(subchance=0.5, symbol_alphabet::Vector{LogicalSymbol}=LogicalSymbol.([:a, :b, :c]), operator_alphabet::Vector{LogicalOperation}=[∧, ∨, →, ⟷, ¬])
-    if rand() < subchance
-        return rand(symbol_alphabet)
-    else
-        rand_op = rand(operator_alphabet)
-        return LogicalExpression(AbstractExpression[random_expression(subchance, symbol_alphabet, operator_alphabet) for _ ∈ 1:argument_count(rand_op)], rand_op)
-    end
-end

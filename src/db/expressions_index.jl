@@ -31,10 +31,23 @@ Gets the `operators` property from an [`OperatorIndexTable`](@ref).
 """
 operators(t::OperatorIndexTable) = t.operators
 
+"""
+    add!(table::OperatorIndexTable, entry::Tuple{Int, LogicalSymbol})
+
+Add an index entry to an [`OperatorIndexTable`](@ref) for a [`LogicalSymbol`](@ref). LogicalSymbols are trivial additions 
+to a operator index since a symbol means that a search has hit a root. Therefore this method just adds the symbol to 
+the table's roots.
+"""
 function add!(table::OperatorIndexTable, entry::Tuple{Int, LogicalSymbol})
     expr_id, sym = entry
     push!(roots(table), expr_id)
 end
+"""
+    add!(table::OperatorIndexTable, entry::Tuple{Int, LogicalExpression})
+
+Add an index entry to an [`OperatorIndexTable`](@ref) for a [`LogicalExpression`](@ref). LogicalExpressions get added to
+an operator table's roots regardless and each of its arguments get added to its operations corresponding subtables.
+"""
 function add!(table::OperatorIndexTable, entry::Tuple{Int, LogicalExpression})
     expr_id, expr = entry
     expr_op, expr_args = operation(expr), arguments(expr)
@@ -79,6 +92,11 @@ function search(table::OperatorIndexTable, operator_pattern::LogicalExpression)
     return reduce(∩, [search(op_subtables[i], expr_args[i]) for i ∈ 1:length(op_subtables)])
 end
 
+"""
+    index(expressions::Set{AbstractExpression})
+
+Creates an [`Index`](@ref) for a given set of expressions.
+"""
 function index(expressions::Set{AbstractExpression})
     root_table = OperatorIndexTable()
     idx = Index(root_table, Dict{Int, AbstractExpression}())
@@ -89,4 +107,9 @@ function index(expressions::Set{AbstractExpression})
 
     idx
 end
+"""
+    index(expressions::Set{AbstractExpression})
+
+Creates an [`Index`](@ref) for a given vector of expressions. This is the same as indexing the set containing all elements in the vector.
+"""
 index(expressions::Vector{AbstractExpression}) = index(Set{AbstractExpression}(expressions))
