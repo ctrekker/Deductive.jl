@@ -41,29 +41,8 @@ FreeVariableType = LogicalSymbol
 # end
 
 
-# ∨(p::Bool, q::Bool) = p || q
-# ∨(p::SB, q::SB) = Term(∨, [p, q])
-# ∧(p::Bool, q::Bool) = p && q
-# ∧(p::SB, q::SB) = Term(∧, [p, q])
-
-# ¬(x::Bool) = !x
-# ¬(x::SB) = Term(¬, [x])
-
-# →(p::Bool, q::Bool) = ¬p ∨ q  # material implication
-# →(p::SB, q::SB) = Term(→, [p, q])
-# ⟶ = ⟹ = →
-
-# ←(p::Bool, q::Bool) = p ∨ ¬q  # material implication
-# ←(p::SB, q::SB) = Term(←, [p, q])
-# ⟵ = ←
-
-# ⟷(p::Bool, q::Bool) = (p ∧ q) ∨ (¬p ∧ ¬q)  # material implication
-# ⟷(p::SB, q::SB) = Term(⟷, [p, q])
-# ↔ = ⇔ = ⟷
-
-
 # quantifiers
-# todo: fix quantifier logic
+# todo: fix quantifier logic (see https://github.com/ctrekker/Deductive.jl/issues/2)
 Ē = LogicalOperation((n, m) -> nothing, :Ē, 2, false, false)
 Ā = LogicalOperation((n, m) -> nothing, :Ā, 2, false, false)
 # function Ē(x::FreeVariableType, st::AbstractExpression)
