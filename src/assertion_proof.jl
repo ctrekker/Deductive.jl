@@ -213,20 +213,25 @@ end
 
 # this method involves keeping a set of all applied rules and checking rule_combinations on it
 #   conclusion: it blows up WAY too quickly; this is most certainly hyperexponential wrt. max_depth
+#   another thought: one of the reasons this is inefficient is because `rule_combinations` doesn't scale
+#                    well with larger sets of statements. Perhaps some sort of ordering system could be
+#                    used for n*log(n) level match times?
 function prove_method1(gg; calculus=PropositionalCalculus, max_depth=10)
     # naive iteration
     consequences = copy(given(gg))
+    consequences_current = copy(consequences)
 
     for depth ∈ 1:max_depth
         for rule ∈ calculus
             combinations = rule_combinations(rule, consequences)
             if length(combinations) > 0
-                union!(consequences, [
+                union!(consequences_current, [
                     substitute(conclusion(rule), sym_map)
                     for sym_map ∈ combinations
                 ])
             end
         end
+        consequences = consequences_current
     end
 
     consequences
