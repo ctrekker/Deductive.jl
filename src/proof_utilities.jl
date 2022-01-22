@@ -20,7 +20,7 @@ function ProofLine(line::Int, statement::AbstractExpression, argument::A="N/A") 
     ProofLine(line, statement, argument, ProofLine{A}[])
 end
 """
-    ProofLine(line::Int, statement::AbstractExpression, argument::A, reference::ProofLine) where {A}
+    ProofLine(line::Int, statement::AbstractExpression, argument::A, reference::ProofLine{A}) where {A}
 
 Convenience method. Creates a [`ProofLine`](@ref) with a single provided reference instead of a list of them.
 """
