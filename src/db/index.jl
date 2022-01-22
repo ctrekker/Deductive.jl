@@ -1,3 +1,6 @@
+export search
+
+
 abstract type AbstractDeductiveIndex end
 abstract type AbstractDeductiveIndexTable end
 
