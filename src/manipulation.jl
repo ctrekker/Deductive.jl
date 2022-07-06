@@ -2,7 +2,7 @@ export matches, recursivematches, replace, find_matches, find_matches!, evaluate
 
 function reconstruct_replacement(replacement_expr::AbstractExpression, replacements::Dict{LogicalSymbol, AbstractExpression})
     if istree(replacement_expr)
-        rr = reconstruct_replacement.(arguments(replacement_expr), Iterators.repeat([replacements], length(arguments(replacement_expr))))
+        rr = reconstruct_replacement.(arguments(replacement_expr), flat_repeat(replacements, length(arguments(replacement_expr))))
         return LogicalExpression(Vector{AbstractExpression}(rr), operation(replacement_expr))
     end
 
@@ -21,7 +21,7 @@ end
 function recursivereplace(expr::AbstractExpression, rule::Pair{T, U}) where {T <: AbstractExpression, U <: AbstractExpression}
     replaced_expr = replace(expr, rule)
     if replaced_expr == expr && istree(replaced_expr)
-        new_args = Vector{AbstractExpression}(recursivereplace.(arguments(expr), Iterators.repeat([rule], length(arguments(expr)))))
+        new_args = Vector{AbstractExpression}(recursivereplace.(arguments(expr), flat_repeat(rule, length(arguments(expr)))))
         if any(new_args .!= arguments(expr))
             return LogicalExpression(new_args, operation(expr))
         end

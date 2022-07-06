@@ -1,9 +1,9 @@
 """
     flat_repeat(x, n)
 
-Shortcut for `Iterators.repeat([x], n)`
+Fast version of `repeat([x], n)`
 """
-flat_repeat(x, n) = Iterators.repeat([x], n)
+const flat_repeat = fill
 
 function subscript_number(n::Int)
     sub_dict = Dict(
