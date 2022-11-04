@@ -2,7 +2,7 @@ export matches, recursivematches, replace, find_matches, find_matches!, evaluate
 
 function reconstruct_replacement(replacement_expr::AbstractExpression, replacements::Dict{LogicalSymbol, AbstractExpression})
     if istree(replacement_expr)
-        rr = reconstruct_replacement.(arguments(replacement_expr), Iterators.repeat([replacements], length(arguments(replacement_expr))))
+        rr = reconstruct_replacement.(arguments(replacement_expr), repeat([replacements], length(arguments(replacement_expr))))
         return LogicalExpression(Vector{AbstractExpression}(rr), operation(replacement_expr))
     end
 
@@ -21,7 +21,7 @@ end
 function recursivereplace(expr::AbstractExpression, rule::Pair{T, U}) where {T <: AbstractExpression, U <: AbstractExpression}
     replaced_expr = replace(expr, rule)
     if replaced_expr == expr && istree(replaced_expr)
-        new_args = Vector{AbstractExpression}(recursivereplace.(arguments(expr), Iterators.repeat([rule], length(arguments(expr)))))
+        new_args = Vector{AbstractExpression}(recursivereplace.(arguments(expr), repeat([rule], length(arguments(expr)))))
         if any(new_args .!= arguments(expr))
             return LogicalExpression(new_args, operation(expr))
         end
@@ -44,7 +44,7 @@ function find_matches!(expr::AbstractExpression, pattern::AbstractExpression, ma
             return false
         end
 
-        return all(find_matches!.(arguments(expr), arguments(pattern), Iterators.repeat([matches], length(arguments(expr)))))
+        return all(find_matches!.(arguments(expr), arguments(pattern), repeat([matches], length(arguments(expr)))))
     elseif pattern isa ExtensionalSet
         if !(expr isa ExtensionalSet) || cardinality(expr) != cardinality(pattern)
             return false
@@ -93,7 +93,7 @@ function repeated_chain_simplify(expr::AbstractExpression, rules::Vector{Pair{Ab
 end
 
 evaluate(sym::LogicalSymbol, values::Dict{LogicalSymbol, Bool}) = values[sym]
-evaluate(expr::LogicalExpression, values::Dict{LogicalSymbol, Bool}=Dict{LogicalSymbol, Bool}()) = operation(expr).bool_fn((evaluate.(arguments(expr), Iterators.repeat([values], length(arguments(expr)))))...)
+evaluate(expr::LogicalExpression, values::Dict{LogicalSymbol, Bool}=Dict{LogicalSymbol, Bool}()) = operation(expr).bool_fn((evaluate.(arguments(expr), repeat([values], length(arguments(expr)))))...)
 
 
 

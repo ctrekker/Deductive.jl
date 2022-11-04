@@ -17,7 +17,7 @@ function contains_expression(haystack::LogicalExpression, kneedle::LogicalExpres
     if isequal(haystack, kneedle)
         return true
     end
-    return any(contains_expression.(arguments(haystack), Iterators.repeat([kneedle], length(arguments(haystack)))))
+    return any(contains_expression.(arguments(haystack), repeat([kneedle], length(arguments(haystack)))))
 end
 
 # if kneedle is a symbol, use the variables set to quickly check if its a subexpression
